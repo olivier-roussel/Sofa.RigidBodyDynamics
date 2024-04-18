@@ -2,7 +2,7 @@ import sys
 import os
 
 pinocchio_model_path='/home/olrousse/devel/mambaforge/envs/sofa-pinocchio-dev/src/pinocchio/models/'
-urdf_file='example-robot-data/robots/ur_description/urdf/ur5_robot.urdf'
+urdf_file='example-robot-data/robots/ur_description/urdf/ur10_robot.urdf'
 # urdf_file='example-robot-data/robots/bolt_description/robots/bolt.urdf'
 
 if not os.path.isdir(pinocchio_model_path):

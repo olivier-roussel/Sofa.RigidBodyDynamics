@@ -103,8 +103,10 @@ namespace sofa::component::mapping
     // map in configuration to pinocchio
     Eigen::VectorXd q_in = Eigen::VectorXd::Zero(m_model->nq);
     InVecCoord in_dofs = dataVecInPos[0]->getValue();
-    // XXX add helpers to convert types ?
-    for (auto i = 0ul; i < in_dofs.size(); ++i)
+    msg_info() << "in_dofs size: " << in_dofs.size() << " / model nq = " << m_model->nq;
+    // assert(m_model->nq == in_dofs.size()); // uncomment me
+    // XXX add helpers to convert types 
+    for (auto i = 0ul; i < q_in.size(); ++i)
       q_in[i] = in_dofs[i](0);
     msg_info() << "q_in: " << q_in.transpose();
 
@@ -117,18 +119,19 @@ namespace sofa::component::mapping
     pinocchio::updateGeometryPlacements(*m_model, *m_data, *m_visualModel, *m_visualData);
     msg_info() << " geometry placements updated";
 
-    msg_info() << " Robot data oMi vector size: " << m_data->oMi.size();
+    // msg_info() << " Robot data oMi vector size: " << m_data->oMi.size();
 
-    assert(m_data->oMi.size() == out.size());
+    // Single output vector of size njoints
+    OutDataVecCoord *bodyPoseW = dataVecOutPos[0];
+    // msg_info() << "bodyPoseW size = " << bodyPoseW->getValue().size();
+    assert(bodyPoseW->getValue().size() == m_data->oMi.size());
 
-    for (auto jointIdx = 0ul; jointIdx < dataVecOutPos.size(); ++jointIdx)
+    helper::WriteAccessor<OutDataVecCoord> accessBodyPoseW(bodyPoseW);
+    for (auto jointIdx = 0ul; jointIdx < m_model->njoints; ++jointIdx)
     {
-      OutDataVecCoord *bodyPoseW = dataVecOutPos[jointIdx];
-
-      assert(bodyPoseW->getValue().size() == 1);
-
       helper::WriteAccessor<OutDataVecCoord> accessBodyPoseW(bodyPoseW);
-      accessBodyPoseW[0] = sofa::rigidbodydynamics::toSofaType(m_data->oMi[jointIdx]);
+      accessBodyPoseW[jointIdx] = sofa::rigidbodydynamics::toSofaType(m_data->oMi[jointIdx]);
+      // msg_info() << "KinematicChainMapping: setting pose: " << m_data->oMi[jointIdx] << " to joint body[" << jointIdx << "]";
     }
   }
 
@@ -140,6 +143,8 @@ namespace sofa::component::mapping
   {
     if (d_componentState.getValue() == sofa::core::objectmodel::ComponentState::Invalid)
       return;
+
+    msg_info() << "********* KinematicChainMapping applyJ";
 
     // TODO
   }
@@ -153,6 +158,7 @@ namespace sofa::component::mapping
     if (d_componentState.getValue() == sofa::core::objectmodel::ComponentState::Invalid)
       return;
 
+    msg_info() << "********* KinematicChainMapping applyJT";
     // TODO
   }
 
@@ -162,7 +168,7 @@ namespace sofa::component::mapping
     if (d_componentState.getValue() == sofa::core::objectmodel::ComponentState::Invalid)
       return;
 
-    // TODO
+    // msg_info() << "========= KinematicChainMapping draw";
   }
 
   template <class TIn, class TInRoot, class TOut>
