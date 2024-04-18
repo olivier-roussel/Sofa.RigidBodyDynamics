@@ -20,6 +20,7 @@
  * Contact information: contact@sofa-framework.org                             *
  ******************************************************************************/
 #include <sofa/RigidBodyDynamics/URDFModelLoader.h>
+#include <sofa/RigidBodyDynamics/Conversions.h>
 
 #include <sofa/core/ObjectFactory.h>
 #include <sofa/simulation/Node.h>
@@ -29,6 +30,12 @@
 
 #include <sofa/defaulttype/RigidTypes.h>
 #include <sofa/component/statecontainer/MechanicalObject.h>
+#include <sofa/component/mapping/nonlinear/RigidMapping.h>
+#include <sofa/component/topology/container/constant/MeshTopology.h>
+#include <sofa/component/mass/UniformMass.h>
+#include <sofa/gl/component/rendering3d/OglModel.h>
+
+#include <hpp/fcl/collision_object.h>
 
 using namespace sofa::defaulttype;
 
@@ -127,13 +134,32 @@ namespace sofa::rigidbodydynamics
     jointsDofs->setName("dofs");
     jointsDofs->resize(model->njoints);
     // TODO set a reference configuration here
+    // msg_info() << " 1 =======================================";
+    // auto x0w = helper::getWriteAccessor(jointsDofs->x0);
+    // msg_info() << " 2 =======================================";
+    // auto robotJointsData = context->findData("angles");
+    // if (robotJointsData)
     // {
-      // Data<Vec1Types::VecCoord> *d_q = jointsDofs->write(core::VecCoordId::position());
-      // helper::WriteAccessor<Data<Vec1Types::VecCoord>> q(d_q);
-      // q[0] = 1.;
-      // ...
-      // jointsNode->addObject(jointsDofs);
+    //   msg_info() << "-------------- joints data found, name = " << robotJointsData->getName();
     // }
+    // else
+    // {
+    //   msg_info() << "-------------- joints data NOT found";
+    // }
+    // msg_info() << " 3 =======================================";
+    // jointsDofs->x0.setParent(robotJointsData);
+
+    // {
+    // Data<Vec1Types::VecCoord> *d_q = jointsDofs->write(core::VecCoordId::position());
+    // helper::WriteAccessor<Data<Vec1Types::VecCoord>> q(d_q);
+    // q[0] = 1.;
+    // ...
+    // }
+    jointsNode->addObject(jointsDofs);
+    jointsDofs->init(); // XXX necessary ?
+
+    // XXX -> set mass per body ?
+    const auto jointsMass = New<sofa::component::mass::UniformMass<Vec1Types>>();
 
     // create mapping between robot joints dofs and its bodies placements
     const auto kinematicChainMapping = New<sofa::component::mapping::KinematicChainMapping<Vec1Types, Rigid3Types, Rigid3Types>>();
@@ -147,24 +173,103 @@ namespace sofa::rigidbodydynamics
     // TODO set mapping input2 (free flyer base dof if any)
 
     const auto bodiesNode = context->createChild("Bodies");
-    for (int jointIdx = 0; jointIdx < model->njoints; ++jointIdx)
+    for (pinocchio::JointIndex jointIdx = 0; jointIdx < model->njoints; ++jointIdx)
     {
       const auto bodyNode = bodiesNode->createChild("Body_" + std::to_string(jointIdx));
 
       const auto bodyRigid = New<MechanicalObjectRigid3>();
-      bodyRigid->setName("rigid");
-      bodyRigid->setTranslation(0, 0, 0); // XXX
-      bodyRigid->setRotation(0, 0, 0);    // XXX
+      bodyRigid->setName("bodyRigid");
+      // bodyRigid->setTranslation(0, 0, 0); // XXX
+      // bodyRigid->setRotation(0, 0, 0);    // XXX
       bodyRigid->showObject.setValue(true);
       bodyNode->addObject(bodyRigid);
+      bodyRigid->init(); // XXX necessary ?
 
-      // set all outputs mappings
+      // set output mapping
       kinematicChainMapping->addOutputModel(bodyRigid.get());
+
+
+      // add visual body node
+      const auto visualNode = bodyNode->createChild("Visual");
+
+      // get joint associated geometries
+      const auto visualGeomIndexesIt = kinematicChainMapping->visualData()->innerObjects.find(jointIdx);
+      if (visualGeomIndexesIt != kinematicChainMapping->visualData()->innerObjects.end())
+      {
+        for (const auto &geomIdx : visualGeomIndexesIt->second)
+        {
+          const auto &geom = visualModel->geometryObjects[geomIdx];
+
+          const auto visualBodyNode = visualNode->createChild(geom.name);
+          const auto visualBodyRigid = New<MechanicalObjectRigid3>();
+          // visualBodyNode->addObject(visualBodyRigid);
+          // visualBodyRigid->setName("rigid");
+          // TODO set geom.placement as mech object pos
+          // auto visualBodyRigidwx = helper::getWriteAccessor(visualBodyRigid->x);
+          // placement is local pose w.r.t. parent joint frame
+          // visualBodyRigidwx[0] = sofa::rigidbodydynamics::toSofaType(geom.placement);
+          // visualBodyRigid->init(); // XXX necessary ?
+
+          const auto visualMapping = New<sofa::component::mapping::nonlinear::RigidMapping<Rigid3Types, Rigid3Types>>();
+          visualBodyNode->addObject(visualMapping);
+          visualMapping->setName("joint mapping");
+          // visualMapping->setModels(bodyRigid.get(), visualBodyRigid.get());
+          visualMapping->setPathInputObject("@../bodyRigid");
+          visualMapping->setPathOutputObject("@visualModel");
+
+          visualMapping->f_mapConstraints.setValue(false);
+          visualMapping->f_mapForces.setValue(false);
+          visualMapping->f_mapMasses.setValue(false);
+          visualMapping->init(); // XXX necessary ?
+
+          msg_info() << "joint[" << jointIdx << "]:geom name: " << geom.name << " / parent joint: " << geom.parentJoint << " / object type: " << static_cast<int>(geom.fcl->getObjectType()) << " / node type: " << static_cast<int>(geom.fcl->getNodeType());
+          if (geom.geometry->getObjectType() == hpp::fcl::OT_BVH)
+          {
+            auto bvh_geom = std::dynamic_pointer_cast<hpp::fcl::BVHModelBase>(geom.geometry);
+            assert(bvh_geom);
+            msg_info() << "  mesh has " << bvh_geom->num_tris << " triangles and " << bvh_geom->num_vertices << " vertices";
+            if (bvh_geom->getModelType() == hpp::fcl::BVH_MODEL_TRIANGLES)
+            {
+              const auto visualBodyMesh = New<sofa::component::topology::container::constant::MeshTopology>();
+              visualBodyNode->addObject(visualBodyMesh);
+              visualBodyMesh->setName("mesh");
+              // reconstruct mesh
+              Eigen::Vector3d scale = Eigen::Vector3d::Ones(); // TODO use geom.meshScale instead
+              for (auto vertIdx = 0ul; vertIdx < bvh_geom->num_vertices; ++vertIdx)
+              {
+                auto fclVert = bvh_geom->vertices[vertIdx];
+                visualBodyMesh->addPoint(fclVert[0] * scale[0], fclVert[1] * scale[1], fclVert[2] * scale[2]);
+              }
+              for (auto triIdx = 0ul; triIdx < bvh_geom->num_tris; ++triIdx)
+              {
+                auto fclTri = bvh_geom->tri_indices[triIdx];
+                visualBodyMesh->addTriangle(fclTri[0], fclTri[1], fclTri[2]);
+              }
+
+              // add visual openGL model (should be linked automatically to the topology)
+              auto visualBodyModel = New<sofa::gl::component::rendering3d::OglModel>();
+              visualBodyNode->addObject(visualBodyModel);
+              visualBodyModel->setName("visualModel");
+              visualBodyModel->init();
+              visualBodyModel->initVisual();
+              visualBodyModel->updateVisual();
+            }
+            else
+            {
+              msg_error() << "Unsupported FCL BVH model, value = " << static_cast<int>(bvh_geom->getModelType());
+            }
+          }
+        }
+      }
+      
     }
 
     jointsNode->addObject(kinematicChainMapping);
     msg_info() << "Model has " << model->referenceConfigurations.size() << " reference configurations registered";
     // TODO apply mapping to set reference configuration ?
+
+    jointsNode->updateContext(); // XXX necessary ?
+    bodiesNode->updateContext(); // XXX necessary ?
   }
 
 } /// namespace sofa::rigidbodydynamics

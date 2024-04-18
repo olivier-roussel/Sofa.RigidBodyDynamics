@@ -3,12 +3,16 @@ project(Sofa.RigidBodyDynamics VERSION 23.12.99 LANGUAGES CXX)
 
 find_package(Sofa.Simulation.Core REQUIRED)
 find_package(Sofa.Component.StateContainer REQUIRED)
-# find_package(Sofa.Component.Topology.Container.Constant REQUIRED)
+find_package(Sofa.Component.Mapping.NonLinear REQUIRED)
+find_package(Sofa.Component.Mass REQUIRED)
+find_package(Sofa.Component.Topology.Container.Constant REQUIRED)
+find_package(Sofa.GL.Component.Rendering3D REQUIRED)
 
 # List all files
 set(SOFA_RBD_SRC_DIR src/sofa/RigidBodyDynamics)
 set(HEADER_FILES
     ${SOFA_RBD_SRC_DIR}/config.h.in
+    ${SOFA_RBD_SRC_DIR}/Conversions.h
     ${SOFA_RBD_SRC_DIR}/KinematicChainMapping.h
     ${SOFA_RBD_SRC_DIR}/KinematicChainMapping.inl
     ${SOFA_RBD_SRC_DIR}/URDFModelLoader.h
@@ -31,7 +35,10 @@ add_library(${PROJECT_NAME} SHARED ${HEADER_FILES} ${SOURCE_FILES} ${README_FILE
 target_link_libraries(${PROJECT_NAME} 
   Sofa.Simulation.Core
   Sofa.Component.StateContainer
-  # Sofa.Component.Topology.Container.Constant
+  Sofa.Component.Mapping.NonLinear
+  Sofa.Component.Mass
+  Sofa.Component.Topology.Container.Constant
+  Sofa.GL.Component.Rendering3D
   pinocchio::pinocchio
   )
 

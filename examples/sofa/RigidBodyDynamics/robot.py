@@ -17,9 +17,13 @@ class Robot:
         self.node=node
 
     def addRobot(self, name='Robot', translation=[0,0,0]):
+
+        initAngles = [0,0,0,0,0,0,0] # 7 angles
+
         # Robot node
         robot = self.node.addChild(name)
         # robot.addData('angles', initAngles, None, 'angle of articulations in radian', '', 'vector<float>')
+        robot.addData('angles', initAngles, None, 'angle of articulations in radian', '', 'vector<float>')
         robot.addObject('EulerImplicitSolver')
         robot.addObject('SparseLDLSolver', template="CompressedRowSparseMatrixMat3x3d")
         robot.addObject('GenericConstraintCorrection')
@@ -34,12 +38,12 @@ class Robot:
 def createScene(rootNode):
 
     from header import addHeader
-    # from robotGUI import RobotGUI  # Uncomment this if you want to use the GUI
+    from robotGUI import RobotGUI  # Uncomment this if you want to use the GUI
 
     addHeader(rootNode)
 
     # Robot
     robot = Robot(rootNode).addRobot()
-    # robot.addObject(RobotGUI(robot=robot))  # Uncomment this if you want to use the GUI
+    robot.addObject(RobotGUI(robot=robot))  # Uncomment this if you want to use the GUI
 
     return

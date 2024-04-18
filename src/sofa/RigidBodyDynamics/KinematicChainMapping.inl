@@ -22,6 +22,7 @@
 
 #pragma once
 #include <sofa/RigidBodyDynamics/KinematicChainMapping.h>
+#include <sofa/RigidBodyDynamics/Conversions.h>
 
 #include <sofa/core/visual/VisualParams.h>
 #include <sofa/helper/visual/DrawTool.h>
@@ -99,11 +100,6 @@ namespace sofa::component::mapping
     if (d_componentState.getValue() == sofa::core::objectmodel::ComponentState::Invalid)
       return;
 
-    // Create data required by the algorithms
-    pinocchio::Data data(*m_model);
-    pinocchio::GeometryData collision_data(*m_collisionModel);
-    pinocchio::GeometryData visual_data(*m_visualModel);
-
     // map in configuration to pinocchio
     Eigen::VectorXd q_in = Eigen::VectorXd::Zero(m_model->nq);
     InVecCoord in_dofs = dataVecInPos[0]->getValue();
@@ -113,32 +109,27 @@ namespace sofa::component::mapping
     msg_info() << "q_in: " << q_in.transpose();
 
     // Perform the forward kinematics over the kinematic tree
-    pinocchio::forwardKinematics(*m_model, data, q_in);
+    pinocchio::forwardKinematics(*m_model, *m_data, q_in);
     msg_info() << " fwd kinematics computed";
 
     // Update Geometry models
-    pinocchio::updateGeometryPlacements(*m_model, data, *m_collisionModel, collision_data);
-    pinocchio::updateGeometryPlacements(*m_model, data, *m_visualModel, visual_data);
+    pinocchio::updateGeometryPlacements(*m_model, *m_data, *m_collisionModel, *m_collisionData);
+    pinocchio::updateGeometryPlacements(*m_model, *m_data, *m_visualModel, *m_visualData);
     msg_info() << " geometry placements updated";
 
-    msg_info() << " Robot data oMi vector size: " << data.oMi.size();
-    
-    assert(data.oMi.size() == out.size());
+    msg_info() << " Robot data oMi vector size: " << m_data->oMi.size();
+
+    assert(m_data->oMi.size() == out.size());
 
     for (auto jointIdx = 0ul; jointIdx < dataVecOutPos.size(); ++jointIdx)
     {
       OutDataVecCoord *bodyPoseW = dataVecOutPos[jointIdx];
-      
+
       assert(bodyPoseW->getValue().size() == 1);
 
       helper::WriteAccessor<OutDataVecCoord> accessBodyPoseW(bodyPoseW);
-      const auto in_quat = Eigen::Quaterniond{data.oMi[jointIdx].rotation()};
-      sofa::type::Quat out_quat(in_quat.x(), in_quat.y(), in_quat.z(), in_quat.w());
-      const auto &in_pos = data.oMi[jointIdx].translation();
-      sofa::type::Vec3 out_pos(in_pos.x(), in_pos.y(), in_pos.z());
-      accessBodyPoseW[0] = Rigid3dTypes::Coord(out_pos, out_quat);
+      accessBodyPoseW[0] = sofa::rigidbodydynamics::toSofaType(m_data->oMi[jointIdx]);
     }
-
   }
 
   template <class TIn, class TInRoot, class TOut>
@@ -149,7 +140,7 @@ namespace sofa::component::mapping
   {
     if (d_componentState.getValue() == sofa::core::objectmodel::ComponentState::Invalid)
       return;
-    
+
     // TODO
   }
 
@@ -173,4 +164,44 @@ namespace sofa::component::mapping
 
     // TODO
   }
+
+  template <class TIn, class TInRoot, class TOut>
+  void KinematicChainMapping<TIn, TInRoot, TOut>::setModel(const std::shared_ptr<pinocchio::Model> &model)
+  {
+    assert(model);
+    m_model = model;
+    // build model data
+    m_data = std::make_shared<pinocchio::Data>(*m_model);
+  }
+
+  template <class TIn, class TInRoot, class TOut>
+  void KinematicChainMapping<TIn, TInRoot, TOut>::setCollisionModel(const std::shared_ptr<pinocchio::GeometryModel> &collisionModel)
+  {
+    assert(collisionModel);
+    m_collisionModel = collisionModel;
+    // build collision data
+    m_collisionData = std::make_shared<pinocchio::GeometryData>(*m_collisionModel);
+  }
+
+  template <class TIn, class TInRoot, class TOut>
+  void KinematicChainMapping<TIn, TInRoot, TOut>::setVisualModel(const std::shared_ptr<pinocchio::GeometryModel> &visualModel)
+  {
+    assert(visualModel);
+    m_visualModel = visualModel;
+    // build visual data
+    m_visualData = std::make_shared<pinocchio::GeometryData>(*m_visualModel);
+  }
+
+  template <class TIn, class TInRoot, class TOut>
+  const std::shared_ptr<pinocchio::GeometryData> &KinematicChainMapping<TIn, TInRoot, TOut>::collisionData() const
+  {
+    return m_collisionData;
+  }
+
+  template <class TIn, class TInRoot, class TOut>
+  const std::shared_ptr<pinocchio::GeometryData> &KinematicChainMapping<TIn, TInRoot, TOut>::visualData() const
+  {
+    return m_visualData;
+  }
+
 } // namespace sofa::component::mapping

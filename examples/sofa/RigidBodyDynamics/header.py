@@ -13,7 +13,7 @@ def addHeader(rootNode):
     rootNode.addObject('RequiredPlugin', name='Sofa.Component.Visual') # Needed to use components [VisualStyle]  
     
     rootNode.addObject('VisualStyle', displayFlags='showVisualModels hideBehaviorModels hideForceFields hideWireframe')
-    rootNode.addObject('RequiredPlugin', name='SofaPlugins', pluginName=['Sofa.RigidBodyDynamics', 'SofaPython3'])
+    rootNode.addObject('RequiredPlugin', name='SofaPlugins', pluginName=['Sofa.RigidBodyDynamics_d', 'SofaPython3'])
 
     rootNode.addObject('DefaultVisualManagerLoop')
     rootNode.addObject('FreeMotionAnimationLoop')
