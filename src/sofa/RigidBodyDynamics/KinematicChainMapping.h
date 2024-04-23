@@ -141,9 +141,7 @@ namespace sofa::component::mapping
     std::shared_ptr<pinocchio::Model> m_model;
     std::shared_ptr<pinocchio::GeometryModel> m_collisionModel;
     std::shared_ptr<pinocchio::GeometryModel> m_visualModel;
-  public: // XXX
     std::shared_ptr<pinocchio::Data> m_data;
-  private:
     std::shared_ptr<pinocchio::GeometryData> m_collisionData;
     std::shared_ptr<pinocchio::GeometryData> m_visualData;
 

@@ -29,24 +29,25 @@
 
 namespace sofa::rigidbodydynamics
 {
-// template <typename RealType> 
-// sofa::type::Quat<RealType> toSofaType(const Eigen::Quaternion<RealType>& quat)
-inline
-sofa::type::Quat<double> toSofaType(const Eigen::Quaterniond& in_quat)
-{
-  return sofa::type::Quat<double>(in_quat.x(), in_quat.y(), in_quat.z(), in_quat.w());
-}
+  // template <typename RealType>
+  // sofa::type::Quat<RealType> toSofaType(const Eigen::Quaternion<RealType>& quat)
+  inline sofa::type::Quat<double> quatToSofaType(const Eigen::Quaterniond &in_quat)
+  {
+    return sofa::type::Quat<double>(in_quat.x(), in_quat.y(), in_quat.z(), in_quat.w());
+  }
 
-inline
-sofa::type::Vec<3, double> toSofaType(const Eigen::Vector3d& in_vec)
-{
-  return sofa::type::Vec<3, double>(in_vec.x(), in_vec.y(), in_vec.z());
-}
+  inline sofa::type::Vec<3, double> vec3ToSofaType(const Eigen::Vector3d &in_vec)
+  {
+    return sofa::type::Vec<3, double>(in_vec.x(), in_vec.y(), in_vec.z());
+  }
 
-inline
-sofa::defaulttype::RigidCoord<3,double> toSofaType(const pinocchio::SE3& in_pose)
-{
-  return sofa::defaulttype::RigidCoord<3,double>(toSofaType(in_pose.translation()), toSofaType(Eigen::Quaterniond{in_pose.rotation()}));
-}
+  inline sofa::defaulttype::RigidCoord<3, double> se3ToSofaType(const pinocchio::SE3 &in_pose)
+  {
+    return sofa::defaulttype::RigidCoord<3, double>(vec3ToSofaType(in_pose.translation()), quatToSofaType(Eigen::Quaterniond{in_pose.rotation()}));
+  }
 
+  inline sofa::defaulttype::RigidDeriv<3, double> vec6ToSofaType(const Eigen::Matrix<double, 6, 1> &in_vel)
+  {
+    return sofa::defaulttype::RigidDeriv<3, double>(vec3ToSofaType(in_vel.block<3, 1>(0, 0)), vec3ToSofaType(in_vel.block<3, 1>(3, 0)));
+  }
 } // namespace sofa::rigidbodydynamics

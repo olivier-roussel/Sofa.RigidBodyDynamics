@@ -21,14 +21,13 @@
  ******************************************************************************/
 
 #pragma once
-#include <sofa/RigidBodyDynamics/KinematicChainMapping.h>
-#include <sofa/RigidBodyDynamics/Conversions.h>
 
+#include <sofa/RigidBodyDynamics/KinematicChainMapping.h>
+
+#include <sofa/RigidBodyDynamics/Conversions.h>
+#include <sofa/core/objectmodel/BaseContext.h>
 #include <sofa/core/visual/VisualParams.h>
 #include <sofa/helper/visual/DrawTool.h>
-
-#include <sofa/core/objectmodel/BaseContext.h>
-// #include <sofa/component/topology/container/constant/MeshTopology.h>
 
 #include <pinocchio/multibody/fcl.hpp>
 #include <pinocchio/algorithm/kinematics.hpp>
@@ -104,14 +103,17 @@ namespace sofa::component::mapping
     Eigen::VectorXd q_in = Eigen::VectorXd::Zero(m_model->nq);
     InVecCoord in_dofs = dataVecInPos[0]->getValue();
     msg_info() << "in_dofs size: " << in_dofs.size() << " / model nq = " << m_model->nq;
-    // assert(m_model->nq == in_dofs.size()); // uncomment me
-    // XXX add helpers to convert types 
+    // XXX add helpers to convert types
     for (auto i = 0ul; i < q_in.size(); ++i)
       q_in[i] = in_dofs[i](0);
     msg_info() << "q_in: " << q_in.transpose();
 
     // Perform the forward kinematics over the kinematic tree
-    pinocchio::forwardKinematics(*m_model, *m_data, q_in);
+    // pinocchio::forwardKinematics(*m_model, *m_data, q_in);
+    // Computes joints Jacobians and forward kinematics. Jacobians will
+    // be used by applyJ and not apply function, but this is done here 
+    // to avoid duplicate computation of forward kinematics
+    pinocchio::computeJointJacobians(*m_model, *m_data, q_in);
     msg_info() << " fwd kinematics computed";
 
     // Update Geometry models
@@ -129,8 +131,8 @@ namespace sofa::component::mapping
     helper::WriteAccessor<OutDataVecCoord> accessBodyPoseW(bodyPoseW);
     for (auto jointIdx = 0ul; jointIdx < m_model->njoints; ++jointIdx)
     {
-      helper::WriteAccessor<OutDataVecCoord> accessBodyPoseW(bodyPoseW);
-      accessBodyPoseW[jointIdx] = sofa::rigidbodydynamics::toSofaType(m_data->oMi[jointIdx]);
+      // helper::WriteAccessor<OutDataVecCoord> accessBodyPoseW(bodyPoseW);
+      accessBodyPoseW[jointIdx] = sofa::rigidbodydynamics::se3ToSofaType(m_data->oMi[jointIdx]);
       // msg_info() << "KinematicChainMapping: setting pose: " << m_data->oMi[jointIdx] << " to joint body[" << jointIdx << "]";
     }
   }
@@ -141,12 +143,35 @@ namespace sofa::component::mapping
       const type::vector<const InDataVecDeriv *> &dataVecInVel,
       const type::vector<const InRootDataVecDeriv *> &dataVecInRootVel)
   {
+    msg_info() << "********* KinematicChainMapping applyJ";
     if (d_componentState.getValue() == sofa::core::objectmodel::ComponentState::Invalid)
       return;
 
-    msg_info() << "********* KinematicChainMapping applyJ";
+    assert(m_q != boost::none);
 
-    // TODO
+    // map in configuration to pinocchio
+    Eigen::VectorXd dq_in = Eigen::VectorXd::Zero(m_model->nv);
+    InVecDeriv in_dofs = dataVecInVel[0]->getValue();
+    msg_info() << "in_dofs size: " << in_dofs.size() << " / model nv = " << m_model->nv;
+    // XXX add helpers to convert types
+    for (auto i = 0ul; i < dq_in.size(); ++i)
+      dq_in[i] = in_dofs[i](0);
+    msg_info() << "dq_in: " << dq_in.transpose();
+
+
+    // Single output vector of size njoints
+    OutDataVecDeriv *dgdq_w = dataVecOutVel[0];
+
+    // assert(dgdq_w->getValue().size() == m_data->J.cols());
+
+    helper::WriteAccessor<OutDataVecDeriv> access_dgdq_w(dgdq_w);
+    for (auto jointIdx = 0ul; jointIdx < m_model->njoints; ++jointIdx)
+    {
+      // access_dgdq_w[jointIdx] = sofa::rigidbodydynamics::vec6ToSofaType(m_data->J.col(jointIdx));
+      sofa::defaulttype::RigidDeriv<3, double> nul_dgdq;
+      access_dgdq_w[jointIdx] = nul_dgdq;
+      // msg_info() << "KinematicChainMapping: setting pose: " << m_data->oMi[jointIdx] << " to joint body[" << jointIdx << "]";
+    }
   }
 
   template <class TIn, class TInRoot, class TOut>
@@ -159,7 +184,21 @@ namespace sofa::component::mapping
       return;
 
     msg_info() << "********* KinematicChainMapping applyJT";
-    // TODO
+
+    // Single output vector of size njoints
+    msg_info() << "dataVecOut1Force = " << dataVecOut1Force.size();
+    msg_info() << "dataVecOut2Force = " << dataVecOut2Force.size();
+    msg_info() << "dataVecInForce = " << dataVecInForce.size();
+    InDataVecDeriv *dgdqT_w = dataVecOut1Force[0];
+    helper::WriteAccessor<InDataVecDeriv> access_dgdqT_w(dgdqT_w);
+    msg_info() << "dgdqT_w size: " << access_dgdqT_w.size();
+
+    // assert(dgdq_w->getValue().size() == m_data->J.cols());
+
+    for (auto jointIdx = 0ul; jointIdx < m_model->njoints; ++jointIdx)
+    {
+      // access_dgdqT_w[jointIdx] = 0.;
+    }
   }
 
   template <class TIn, class TInRoot, class TOut>
@@ -168,7 +207,6 @@ namespace sofa::component::mapping
     if (d_componentState.getValue() == sofa::core::objectmodel::ComponentState::Invalid)
       return;
 
-    // msg_info() << "========= KinematicChainMapping draw";
   }
 
   template <class TIn, class TInRoot, class TOut>

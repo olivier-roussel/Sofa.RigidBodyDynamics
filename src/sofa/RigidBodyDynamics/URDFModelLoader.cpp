@@ -178,10 +178,6 @@ namespace sofa::rigidbodydynamics
     kinematicChainMapping->setVisualModel(visualModel);
     // set mapping input1
     kinematicChainMapping->addInputModel1(jointsDofs.get());
-    // XXX disable mechanical properties to limit to pure geometry for now
-    kinematicChainMapping->f_mapForces.setValue(false);
-    kinematicChainMapping->f_mapConstraints.setValue(false);
-    kinematicChainMapping->f_mapMasses.setValue(false);
     // TODO set mapping input2 (free flyer base dof if any)
 
     // one dof container for all bodies version
@@ -207,9 +203,6 @@ namespace sofa::rigidbodydynamics
       bodyMapping->d_index = jointIdx;
       bodyMapping->d_globalToLocalCoords = false;
       bodyNode->addObject(bodyMapping);
-
-      // set output mapping
-      // kinematicChainMapping->addOutputModel(bodyRigid.get());
 
       // add visual body node
       // const auto visualNode = bodyNode->createChild("Visual");
@@ -282,9 +275,6 @@ namespace sofa::rigidbodydynamics
     }
 
     msg_info() << "Model has " << model->referenceConfigurations.size() << " reference configurations registered";
-
-    jointsNode->updateContext(); // XXX necessary ?
-    bodiesNode->updateContext(); // XXX necessary ?
   }
 
 } /// namespace sofa::rigidbodydynamics
