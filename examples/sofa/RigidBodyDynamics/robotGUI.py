@@ -9,7 +9,7 @@ from math import pi
 
 class App(threading.Thread):
 
-    def __init__(self, initAngles=[0.,0.,0.,0.,0.,0.,0.]):
+    def __init__(self, initAngles=[0.,0.,0.,0.,0.,0.]):
         threading.Thread.__init__(self)
         self.daemon = True
         self.start()
@@ -19,7 +19,6 @@ class App(threading.Thread):
         self.angle4Init = initAngles[3]
         self.angle5Init = initAngles[4]
         self.angle6Init = initAngles[5]
-        self.angle7Init = initAngles[6]
 
     def reset(self):
         self.angle1.set(self.angle1Init)
@@ -28,7 +27,6 @@ class App(threading.Thread):
         self.angle4.set(self.angle4Init)
         self.angle5.set(self.angle5Init)
         self.angle6.set(self.angle6Init)
-        self.angle7.set(self.angle7Init)
 
     def callback(self):
         self.root.quit()
@@ -45,7 +43,6 @@ class App(threading.Thread):
         self.angle4 = tkinter.DoubleVar()
         self.angle5 = tkinter.DoubleVar()
         self.angle6 = tkinter.DoubleVar()
-        self.angle7 = tkinter.DoubleVar()
 
         tkinter.Scale(self.root, variable=self.angle1, resolution=0.001, length=400, from_=-pi, to=pi, orient=tkinter.VERTICAL).grid(row=1, column=0)
         tkinter.Scale(self.root, variable=self.angle2, resolution=0.001, length=400, from_=-pi, to=pi, orient=tkinter.VERTICAL).grid(row=1, column=1)
@@ -53,7 +50,6 @@ class App(threading.Thread):
         tkinter.Scale(self.root, variable=self.angle4, resolution=0.001, length=400, from_=-pi, to=pi, orient=tkinter.VERTICAL).grid(row=1, column=3)
         tkinter.Scale(self.root, variable=self.angle5, resolution=0.001, length=400, from_=-pi, to=pi, orient=tkinter.VERTICAL).grid(row=1, column=4)
         tkinter.Scale(self.root, variable=self.angle6, resolution=0.001, length=400, from_=-pi, to=pi, orient=tkinter.VERTICAL).grid(row=1, column=5)
-        tkinter.Scale(self.root, variable=self.angle7, resolution=0.001, length=400, from_=-pi, to=pi, orient=tkinter.VERTICAL).grid(row=1, column=6)
 
         self.root.mainloop()
 
@@ -63,7 +59,7 @@ class RobotGUI(Sofa.Core.Controller):
     def __init__(self, *args, **kwargs):
         Sofa.Core.Controller.__init__(self,args,kwargs)
         self.robot = kwargs["robot"]
-        self.app = App(kwargs.get("initAngles",[0.,0.,0.,0.,0.,0.,0.]))
+        self.app = App(kwargs.get("initAngles",[0.,0.,0.,0.,0.,0.]))
 
         return
 
@@ -81,8 +77,7 @@ class RobotGUI(Sofa.Core.Controller):
                 self.app.angle3.get(),
                 self.app.angle4.get(),
                 self.app.angle5.get(),
-                self.app.angle6.get(),
-                self.app.angle7.get()
+                self.app.angle6.get()
                 ]
 
         angles = numpy.array(angles)

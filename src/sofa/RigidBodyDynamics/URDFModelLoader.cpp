@@ -134,9 +134,8 @@ namespace sofa::rigidbodydynamics
     const auto jointsNode = context->createChild("Joints");
     const auto jointsDofs = New<MechanicalObjectVec1>();
     jointsDofs->setName("dofs");
-    jointsDofs->resize(model->njoints);
-    msg_info() << "is auto link: " << jointsDofs->x0.isAutoLink();
-    // TODO set a reference configuration here
+    jointsDofs->resize(model->nq);
+    // set desired position specified from \"angles\" data field
     auto robotJointsData = context->findData("angles");
     if (not robotJointsData)
     {
@@ -160,7 +159,7 @@ namespace sofa::rigidbodydynamics
     std::vector<double> springVal = {1e10};
     restShapeForceField->d_stiffness.setValue(springVal);
     sofa::type::vector<sofa::Index> pointsIndexes;
-    for (sofa::Index idx = 0ul; idx < model->njoints; ++idx)
+    for (sofa::Index idx = 0ul; idx < model->nq; ++idx)
     {
       pointsIndexes.push_back(idx);
     }

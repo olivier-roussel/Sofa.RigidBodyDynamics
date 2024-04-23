@@ -18,11 +18,10 @@ class Robot:
 
     def addRobot(self, name='Robot', translation=[0,0,0]):
 
-        initAngles = [0,0,0,0,0,0,0] # 7 angles
+        initAngles = [0,0,0,0,0,0] # 6 dofs
 
         # Robot node
         robot = self.node.addChild(name)
-        # robot.addData('angles', initAngles, None, 'angle of articulations in radian', '', 'vector<float>')
         robot.addData('angles', initAngles, None, 'angle of articulations in radian', '', 'vector<float>')
         robot.addObject('EulerImplicitSolver')
         robot.addObject('SparseLDLSolver', template="CompressedRowSparseMatrixMat3x3d")

@@ -102,7 +102,7 @@ namespace sofa::component::mapping
     // map in configuration to pinocchio
     InVecCoord in_dofs = dataVecInPos[0]->getValue();
     msg_info() << "in_dofs size: " << in_dofs.size() << " / model nq = " << m_model->nq;
-    // assert(in_dofs.size() == m_model->nv);
+    assert(in_dofs.size() == m_model->nv);
     Eigen::VectorXd q = sofa::rigidbodydynamics::vectorVec1ToEigen(in_dofs, m_model->nq);
 
     // Perform the forward kinematics over the kinematic tree
@@ -147,7 +147,7 @@ namespace sofa::component::mapping
     InVecDeriv in_dofs = dataVecInVel[0]->getValue();
 
     msg_info() << "in_dofs size: " << in_dofs.size() << " / model nv = " << m_model->nv;
-    // assert(in_dofs.size() == m_model->nv);
+    assert(in_dofs.size() == m_model->nv);
     Eigen::VectorXd dq = sofa::rigidbodydynamics::vectorVec1ToEigen(in_dofs, m_model->nv);
 
     // Single output vector of size njoints
