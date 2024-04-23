@@ -29,25 +29,53 @@
 
 namespace sofa::rigidbodydynamics
 {
-  // template <typename RealType>
-  // sofa::type::Quat<RealType> toSofaType(const Eigen::Quaternion<RealType>& quat)
-  inline sofa::type::Quat<double> quatToSofaType(const Eigen::Quaterniond &in_quat)
+  template <typename Scalar>
+  inline sofa::type::Quat<Scalar> quatToSofaType(const Eigen::Quaternion<Scalar> &in_quat)
   {
-    return sofa::type::Quat<double>(in_quat.x(), in_quat.y(), in_quat.z(), in_quat.w());
+    return sofa::type::Quat<Scalar>(in_quat.x(), in_quat.y(), in_quat.z(), in_quat.w());
   }
 
-  inline sofa::type::Vec<3, double> vec3ToSofaType(const Eigen::Vector3d &in_vec)
+  template <typename Scalar>
+  inline sofa::type::Vec<3, Scalar> vec3ToSofaType(const Eigen::Vector3<Scalar> &in_vec)
   {
-    return sofa::type::Vec<3, double>(in_vec.x(), in_vec.y(), in_vec.z());
+    return sofa::type::Vec<3, Scalar>(in_vec.x(), in_vec.y(), in_vec.z());
   }
 
-  inline sofa::defaulttype::RigidCoord<3, double> se3ToSofaType(const pinocchio::SE3 &in_pose)
+  template <typename Scalar>
+  inline sofa::defaulttype::RigidCoord<3, Scalar> se3ToSofaType(const pinocchio::SE3Tpl<Scalar> &in_pose)
   {
-    return sofa::defaulttype::RigidCoord<3, double>(vec3ToSofaType(in_pose.translation()), quatToSofaType(Eigen::Quaterniond{in_pose.rotation()}));
+    return sofa::defaulttype::RigidCoord<3, Scalar>(vec3ToSofaType(in_pose.translation()), quatToSofaType(Eigen::Quaternion<Scalar>{in_pose.rotation()}));
   }
 
-  inline sofa::defaulttype::RigidDeriv<3, double> vec6ToSofaType(const Eigen::Matrix<double, 6, 1> &in_vel)
+  template <typename Vector6Like>
+  inline sofa::defaulttype::RigidDeriv<3, typename Vector6Like::Scalar> vec6ToSofaType(const Vector6Like &in_vel)
   {
-    return sofa::defaulttype::RigidDeriv<3, double>(vec3ToSofaType(in_vel.block<3, 1>(0, 0)), vec3ToSofaType(in_vel.block<3, 1>(3, 0)));
+    return sofa::defaulttype::RigidDeriv<3, typename Vector6Like::Scalar>(vec3ToSofaType<typename Vector6Like::Scalar>(in_vel.template head<3>()), vec3ToSofaType<typename Vector6Like::Scalar>(in_vel.template head<3>()));
+  }
+
+  template <typename VectorVec1Type>
+  inline Eigen::VectorXd vectorVec1ToEigen(const VectorVec1Type& in_v, size_t size)
+  {
+    assert(in_v.size() >= size);
+
+    Eigen::VectorXd out(size);
+    for(auto i = 0ul; i < size; ++i)
+    {
+      out[i] = in_v[i](0);
+    }
+    return out;
+  }
+
+  template <typename VectorScalarType>
+  inline Eigen::VectorXd vectorToEigen(const VectorScalarType& in_v, size_t size)
+  {
+    assert(in_v.size() >= size);
+
+    Eigen::VectorXd out(size);
+    for(auto i = 0ul; i < size; ++i)
+    {
+      out[i] = in_v[i];
+    }
+    return out;
   }
 } // namespace sofa::rigidbodydynamics

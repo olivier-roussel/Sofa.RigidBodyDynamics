@@ -30,7 +30,7 @@
 #include <sofa/helper/visual/DrawTool.h>
 
 #include <pinocchio/multibody/fcl.hpp>
-#include <pinocchio/algorithm/kinematics.hpp>
+#include <pinocchio/algorithm/jacobian.hpp>
 #include <pinocchio/algorithm/geometry.hpp>
 
 using namespace sofa::defaulttype;
@@ -100,20 +100,17 @@ namespace sofa::component::mapping
       return;
 
     // map in configuration to pinocchio
-    Eigen::VectorXd q_in = Eigen::VectorXd::Zero(m_model->nq);
     InVecCoord in_dofs = dataVecInPos[0]->getValue();
     msg_info() << "in_dofs size: " << in_dofs.size() << " / model nq = " << m_model->nq;
-    // XXX add helpers to convert types
-    for (auto i = 0ul; i < q_in.size(); ++i)
-      q_in[i] = in_dofs[i](0);
-    msg_info() << "q_in: " << q_in.transpose();
+    // assert(in_dofs.size() == m_model->nv);
+    Eigen::VectorXd q = sofa::rigidbodydynamics::vectorVec1ToEigen(in_dofs, m_model->nq);
 
     // Perform the forward kinematics over the kinematic tree
     // pinocchio::forwardKinematics(*m_model, *m_data, q_in);
     // Computes joints Jacobians and forward kinematics. Jacobians will
     // be used by applyJ and not apply function, but this is done here 
     // to avoid duplicate computation of forward kinematics
-    pinocchio::computeJointJacobians(*m_model, *m_data, q_in);
+    pinocchio::computeJointJacobians(*m_model, *m_data, q);
     msg_info() << " fwd kinematics computed";
 
     // Update Geometry models
@@ -124,16 +121,14 @@ namespace sofa::component::mapping
     // msg_info() << " Robot data oMi vector size: " << m_data->oMi.size();
 
     // Single output vector of size njoints
-    OutDataVecCoord *bodyPoseW = dataVecOutPos[0];
-    // msg_info() << "bodyPoseW size = " << bodyPoseW->getValue().size();
-    assert(bodyPoseW->getValue().size() == m_data->oMi.size());
+    OutDataVecCoord *g_w = dataVecOutPos[0];
 
-    helper::WriteAccessor<OutDataVecCoord> accessBodyPoseW(bodyPoseW);
+    assert(g_w->getValue().size() == m_data->oMi.size());
+
+    helper::WriteAccessor<OutDataVecCoord> accessor_g_w(g_w);
     for (auto jointIdx = 0ul; jointIdx < m_model->njoints; ++jointIdx)
     {
-      // helper::WriteAccessor<OutDataVecCoord> accessBodyPoseW(bodyPoseW);
-      accessBodyPoseW[jointIdx] = sofa::rigidbodydynamics::se3ToSofaType(m_data->oMi[jointIdx]);
-      // msg_info() << "KinematicChainMapping: setting pose: " << m_data->oMi[jointIdx] << " to joint body[" << jointIdx << "]";
+      accessor_g_w[jointIdx] = sofa::rigidbodydynamics::se3ToSofaType(m_data->oMi[jointIdx]);
     }
   }
 
@@ -147,29 +142,26 @@ namespace sofa::component::mapping
     if (d_componentState.getValue() == sofa::core::objectmodel::ComponentState::Invalid)
       return;
 
-    assert(m_q != boost::none);
-
     // map in configuration to pinocchio
-    Eigen::VectorXd dq_in = Eigen::VectorXd::Zero(m_model->nv);
+    // Eigen::VectorXd dq = Eigen::VectorXd::Zero(m_model->nv);
     InVecDeriv in_dofs = dataVecInVel[0]->getValue();
-    msg_info() << "in_dofs size: " << in_dofs.size() << " / model nv = " << m_model->nv;
-    // XXX add helpers to convert types
-    for (auto i = 0ul; i < dq_in.size(); ++i)
-      dq_in[i] = in_dofs[i](0);
-    msg_info() << "dq_in: " << dq_in.transpose();
 
+    msg_info() << "in_dofs size: " << in_dofs.size() << " / model nv = " << m_model->nv;
+    // assert(in_dofs.size() == m_model->nv);
+    Eigen::VectorXd dq = sofa::rigidbodydynamics::vectorVec1ToEigen(in_dofs, m_model->nv);
 
     // Single output vector of size njoints
     OutDataVecDeriv *dgdq_w = dataVecOutVel[0];
 
-    // assert(dgdq_w->getValue().size() == m_data->J.cols());
+    assert(dgdq_w->getValue().size() == m_model->njoints);
 
-    helper::WriteAccessor<OutDataVecDeriv> access_dgdq_w(dgdq_w);
+    helper::WriteAccessor<OutDataVecDeriv> accessor_dgdq_w(dgdq_w);
     for (auto jointIdx = 0ul; jointIdx < m_model->njoints; ++jointIdx)
     {
-      // access_dgdq_w[jointIdx] = sofa::rigidbodydynamics::vec6ToSofaType(m_data->J.col(jointIdx));
-      sofa::defaulttype::RigidDeriv<3, double> nul_dgdq;
-      access_dgdq_w[jointIdx] = nul_dgdq;
+      pinocchio::Data::Matrix6x J(6, m_model->nv);
+      pinocchio::getJointJacobian(*m_model, *m_data, jointIdx, pinocchio::LOCAL, J);
+      Eigen::VectorXd dg = J * dq;
+      accessor_dgdq_w[jointIdx] = sofa::rigidbodydynamics::vec6ToSofaType<Eigen::VectorXd>(dg);
       // msg_info() << "KinematicChainMapping: setting pose: " << m_data->oMi[jointIdx] << " to joint body[" << jointIdx << "]";
     }
   }
@@ -189,16 +181,37 @@ namespace sofa::component::mapping
     msg_info() << "dataVecOut1Force = " << dataVecOut1Force.size();
     msg_info() << "dataVecOut2Force = " << dataVecOut2Force.size();
     msg_info() << "dataVecInForce = " << dataVecInForce.size();
+
     InDataVecDeriv *dgdqT_w = dataVecOut1Force[0];
-    helper::WriteAccessor<InDataVecDeriv> access_dgdqT_w(dgdqT_w);
-    msg_info() << "dgdqT_w size: " << access_dgdqT_w.size();
+    helper::WriteAccessor<InDataVecDeriv> accessor_dgdqT_w(dgdqT_w);
+    msg_info() << "dataVecOut1Force dgdqT_w size: " << accessor_dgdqT_w.size();
 
+    const OutDataVecDeriv *wrench_w = dataVecInForce[0];
+    helper::ReadAccessor<OutDataVecDeriv> accessor_wrench_w(wrench_w);
+    msg_info() << "dataVecInForce accessor_wrench_w size = " << accessor_wrench_w.size();
     // assert(dgdq_w->getValue().size() == m_data->J.cols());
+    for(auto i = 0ul; i < accessor_wrench_w.size(); ++i)
+    {
+      msg_info() << "w[" << i << "]: " << accessor_wrench_w[i];
+    }
 
+
+    Eigen::VectorXd jointTorques = Eigen::VectorXd::Zero(m_model->nv);
     for (auto jointIdx = 0ul; jointIdx < m_model->njoints; ++jointIdx)
     {
-      // access_dgdqT_w[jointIdx] = 0.;
+      // jointForce is a spatial force so 6-vector
+      const Eigen::VectorXd jointForce = sofa::rigidbodydynamics::vectorToEigen(accessor_wrench_w[jointIdx], 6);
+      pinocchio::Data::Matrix6x J(6, m_model->nv);
+      pinocchio::getJointJacobian(*m_model, *m_data, jointIdx, pinocchio::LOCAL, J);
+      jointTorques += J.transpose() * jointForce;
     }
+
+
+    // for(auto i = 0ul; i < jointTorques.size(); ++i)
+    // {
+    //   accessor_dgdqT_w[i] = jointTorques[i];
+    // }
+
   }
 
   template <class TIn, class TInRoot, class TOut>
