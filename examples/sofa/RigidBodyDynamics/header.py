@@ -20,7 +20,8 @@ def addHeader(rootNode):
     rootNode.addObject('GenericConstraintSolver', maxIterations=50, tolerance=1e-5, printLog=False)
     rootNode.addObject('BackgroundSetting', color=[1., 1., 1., 1.])
     rootNode.findData('dt').value=0.01
-    rootNode.gravity = [0,-9810,0]
+    # rootNode.gravity = [0,-9810,0]
+    rootNode.gravity = [0, 0, 0]
 
 
 def createScene(rootNode):

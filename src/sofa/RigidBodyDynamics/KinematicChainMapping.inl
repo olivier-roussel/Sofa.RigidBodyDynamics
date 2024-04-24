@@ -195,6 +195,7 @@ namespace sofa::component::mapping
       msg_info() << "w[" << i << "]: " << accessor_wrench_w[i];
     }
 
+    msg_info() << "pinocchio gravity g = " << m_data->g;
 
     Eigen::VectorXd jointTorques = Eigen::VectorXd::Zero(m_model->nv);
     for (auto jointIdx = 0ul; jointIdx < m_model->njoints; ++jointIdx)
@@ -205,7 +206,6 @@ namespace sofa::component::mapping
       pinocchio::getJointJacobian(*m_model, *m_data, jointIdx, pinocchio::LOCAL, J);
       jointTorques += J.transpose() * jointForce;
     }
-
 
     // for(auto i = 0ul; i < jointTorques.size(); ++i)
     // {

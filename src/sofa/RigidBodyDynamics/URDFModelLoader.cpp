@@ -135,11 +135,11 @@ namespace sofa::rigidbodydynamics
     const auto jointsDofs = New<MechanicalObjectVec1>();
     jointsDofs->setName("dofs");
     jointsDofs->resize(model->nq);
-    // set desired position specified from \"angles\" data field
-    auto robotJointsData = context->findData("angles");
+    // set desired position specified from \"q0\" data field
+    auto robotJointsData = context->findData("q0");
     if (not robotJointsData)
     {
-      msg_error() << "joints data \"angles\" not found ";
+      msg_error() << "joints data \"q0\" not found ";
       d_componentState.setValue(sofa::core::objectmodel::ComponentState::Invalid);
       return;
     }
