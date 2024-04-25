@@ -99,6 +99,7 @@ namespace sofa::rigidbodydynamics
       msg_info() << "Built robot model from URDF file: " << urdfFilename;
       msg_info() << "Robot nq = " << model->nq << " / nv = " << model->nv;
       msg_info() << "Robot njoints = " << model->njoints << " / nbodies = " << model->nbodies << " / nframes = " << model->nframes;
+      msg_info() << "Robot model 6d gravity g = " << model->gravity;
 
       collisionModel = std::make_shared<pinocchio::GeometryModel>();
       pinocchio::urdf::buildGeom(*model, urdfFilename, pinocchio::COLLISION, *collisionModel, modelDir);

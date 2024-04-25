@@ -59,11 +59,9 @@ namespace
       boxPts.emplace_back(+boxGeom->halfSide[0], +boxGeom->halfSide[1], +boxGeom->halfSide[2]); // 7
 
       // apply transfrom and set to mesh data
-      const hpp::fcl::Transform3f fclTf = pinocchio::toFclTransform3f(tf);
       for(const auto pt: boxPts)
       {
-        const auto ptTf = fclTf.transform(pt).cwiseProduct(scale);
-
+        const auto ptTf = tf.act(pt).cwiseProduct(scale);
         meshTopology->addPoint(ptTf[0], ptTf[1], ptTf[2]);
       }
       // add faces
@@ -108,10 +106,9 @@ namespace sofa::rigidbodydynamics
       if (bvhGeom->getModelType() == hpp::fcl::BVH_MODEL_TRIANGLES)
       {
         // reconstruct mesh
-        const hpp::fcl::Transform3f fclTf = pinocchio::toFclTransform3f(tf);
         for (auto vertIdx = 0ul; vertIdx < bvhGeom->num_vertices; ++vertIdx)
         {
-          const auto fclVert = fclTf.transform(bvhGeom->vertices[vertIdx]).cwiseProduct(scale);
+          const auto fclVert = tf.act(bvhGeom->vertices[vertIdx]).cwiseProduct(scale);
           meshTopology->addPoint(fclVert[0], fclVert[1], fclVert[2]);
         }
         for (auto triIdx = 0ul; triIdx < bvhGeom->num_tris; ++triIdx)
