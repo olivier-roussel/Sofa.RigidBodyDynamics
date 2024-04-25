@@ -20,24 +20,24 @@
  * Contact information: contact@sofa-framework.org                             *
  ******************************************************************************/
 #include <sofa/RigidBodyDynamics/URDFModelLoader.h>
+
 #include <sofa/RigidBodyDynamics/Conversions.h>
+#include <sofa/RigidBodyDynamics/GeometryConversions.h>
+#include <sofa/RigidBodyDynamics/KinematicChainMapping.h>
 
 #include <sofa/core/ObjectFactory.h>
+#include <sofa/component/mapping/nonlinear/RigidMapping.h>
+#include <sofa/component/mass/UniformMass.h>
+#include <sofa/component/statecontainer/MechanicalObject.h>
+#include <sofa/component/solidmechanics/spring/RestShapeSpringsForceField.h>
+// #include <sofa/component/topology/container/constant/MeshTopology.h>
+#include <sofa/defaulttype/RigidTypes.h>
+#include <sofa/gl/component/rendering3d/OglModel.h>
 #include <sofa/simulation/Node.h>
-#include <sofa/RigidBodyDynamics/KinematicChainMapping.h>
 
 #include <pinocchio/parsers/urdf.hpp>
 #include <pinocchio/algorithm/kinematics.hpp> // XXX
-
-#include <sofa/defaulttype/RigidTypes.h>
-#include <sofa/component/statecontainer/MechanicalObject.h>
-#include <sofa/component/mapping/nonlinear/RigidMapping.h>
-#include <sofa/component/topology/container/constant/MeshTopology.h>
-#include <sofa/component/mass/UniformMass.h>
-#include <sofa/component/solidmechanics/spring/RestShapeSpringsForceField.h>
-#include <sofa/gl/component/rendering3d/OglModel.h>
-
-#include <hpp/fcl/collision_object.h>
+#include <hpp/fcl/collision_object.h>         // XXX
 
 using namespace sofa::defaulttype;
 
@@ -147,13 +147,13 @@ namespace sofa::rigidbodydynamics
 
     jointsNode->addObject(jointsDofs);
 
-    // XXX -> set mass per body ?
+    // TODO -> set actual mass per body and other inertia properties
     const auto jointsMass = New<sofa::component::mass::UniformMass<Vec1Types>>();
     jointsMass->setName("mass");
     jointsMass->setTotalMass(1.);
     jointsNode->addObject(jointsMass);
 
-    // spring to control robot dofs to desired angular values set by rest position (x0)
+    // spring to control robot dofs to desired dofs set by rest position (x0)
     const auto restShapeForceField = New<sofa::component::solidmechanics::spring::RestShapeSpringsForceField<Vec1Types>>();
     restShapeForceField->setName("RestShapeSpringsForceField");
     std::vector<double> springVal = {1e10};
@@ -204,7 +204,7 @@ namespace sofa::rigidbodydynamics
       bodyNode->addObject(bodyMapping);
 
       // add visual body node
-      // const auto visualNode = bodyNode->createChild("Visual");
+      const auto visualNode = bodyNode->createChild("Visual");
 
       // get joint associated geometries
       const auto visualGeomIndexesIt = kinematicChainMapping->visualData()->innerObjects.find(jointIdx);
@@ -214,7 +214,7 @@ namespace sofa::rigidbodydynamics
         {
           const auto &geom = visualModel->geometryObjects[geomIdx];
 
-          const auto visualBodyNode = bodyNode->createChild(geom.name);
+          const auto visualBodyNode = visualNode->createChild(geom.name);
           // const auto visualBodyRigid = New<MechanicalObjectRigid3>();
           // // visualBodyNode->addObject(visualBodyRigid);
           // // visualBodyRigid->setName("rigid");
@@ -225,50 +225,33 @@ namespace sofa::rigidbodydynamics
           // visualBodyRigid->init(); // XXX necessary ?
 
           msg_info() << "joint[" << jointIdx << "]:geom name: " << geom.name << " / parent joint: " << geom.parentJoint << " / object type: " << static_cast<int>(geom.fcl->getObjectType()) << " / node type: " << static_cast<int>(geom.fcl->getNodeType());
-          if (geom.geometry->getObjectType() == hpp::fcl::OT_BVH)
+
+          auto visualBodyMesh = sofa::rigidbodydynamics::fclGeometryToSofaTopology(geom.geometry);
+          if (not visualBodyMesh)
           {
-            auto bvh_geom = std::dynamic_pointer_cast<hpp::fcl::BVHModelBase>(geom.geometry);
-            assert(bvh_geom);
-            msg_info() << "  mesh has " << bvh_geom->num_tris << " triangles and " << bvh_geom->num_vertices << " vertices";
-            if (bvh_geom->getModelType() == hpp::fcl::BVH_MODEL_TRIANGLES)
-            {
-              const auto visualBodyMesh = New<sofa::component::topology::container::constant::MeshTopology>();
-              visualBodyNode->addObject(visualBodyMesh);
-              visualBodyMesh->setName("mesh");
-              // reconstruct mesh
-              Eigen::Vector3d scale = Eigen::Vector3d::Ones(); // TODO use geom.meshScale instead
-              for (auto vertIdx = 0ul; vertIdx < bvh_geom->num_vertices; ++vertIdx)
-              {
-                auto fclVert = bvh_geom->vertices[vertIdx];
-                visualBodyMesh->addPoint(fclVert[0] * scale[0], fclVert[1] * scale[1], fclVert[2] * scale[2]);
-              }
-              for (auto triIdx = 0ul; triIdx < bvh_geom->num_tris; ++triIdx)
-              {
-                auto fclTri = bvh_geom->tri_indices[triIdx];
-                visualBodyMesh->addTriangle(fclTri[0], fclTri[1], fclTri[2]);
-              }
-
-              // add visual openGL model (should be linked automatically to the topology)
-              auto visualBodyModel = New<sofa::gl::component::rendering3d::OglModel>();
-              visualBodyNode->addObject(visualBodyModel);
-              visualBodyModel->setName("visualModel");
-              visualBodyModel->init();
-              visualBodyModel->initVisual();
-              visualBodyModel->updateVisual();
-
-              const auto visualMapping = New<sofa::component::mapping::nonlinear::RigidMapping<Rigid3Types, Vec3Types>>();
-              visualMapping->setName("visualMapping");
-              visualMapping->setModels(bodyRigid.get(), visualBodyModel.get());
-              visualMapping->f_mapConstraints.setValue(false);
-              visualMapping->f_mapForces.setValue(false);
-              visualMapping->f_mapMasses.setValue(false);
-              visualBodyNode->addObject(visualMapping);
-            }
-            else
-            {
-              msg_error() << "Unsupported FCL BVH model, value = " << static_cast<int>(bvh_geom->getModelType());
-            }
+            msg_error() << "Failed to convert pinocchio FCL geometry to Sofa MeshTopology";
+            msg_error() << "FCL geometry object type: " << static_cast<int>(geom.geometry->getObjectType()) << ", FCL geometry node type: " << static_cast<int>(geom.geometry->getNodeType());
+            d_componentState.setValue(sofa::core::objectmodel::ComponentState::Invalid);
+            return;
           }
+          visualBodyNode->addObject(visualBodyMesh);
+
+          // add visual openGL model (should be linked automatically to the topology)
+          auto visualBodyModel = New<sofa::gl::component::rendering3d::OglModel>();
+          visualBodyNode->addObject(visualBodyModel);
+          visualBodyModel->setName("visualModel");
+          visualBodyModel->l_topology = visualBodyMesh;
+          visualBodyModel->init();
+          visualBodyModel->initVisual();
+          visualBodyModel->updateVisual();
+
+          const auto visualMapping = New<sofa::component::mapping::nonlinear::RigidMapping<Rigid3Types, Vec3Types>>();
+          visualMapping->setName("visualMapping");
+          visualMapping->setModels(bodyRigid.get(), visualBodyModel.get());
+          visualMapping->f_mapConstraints.setValue(false);
+          visualMapping->f_mapForces.setValue(false);
+          visualMapping->f_mapMasses.setValue(false);
+          visualBodyNode->addObject(visualMapping);
         }
       }
     }
