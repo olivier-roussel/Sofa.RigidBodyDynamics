@@ -27,6 +27,8 @@
 namespace sofa::rigidbodydynamics
 {
   sofa::component::topology::container::constant::MeshTopology::SPtr
-  fclGeometryToSofaTopology(const std::shared_ptr<hpp::fcl::CollisionGeometry>& geom);
+  fclGeometryToSofaTopology(const std::shared_ptr<hpp::fcl::CollisionGeometry>& geom, 
+    const pinocchio::SE3& tf,
+    const Eigen::Vector3d& scale);
 
 } // namespace sofa::rigidbodydynamics

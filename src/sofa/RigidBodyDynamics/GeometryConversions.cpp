@@ -23,48 +23,115 @@
 #include <sofa/RigidBodyDynamics/GeometryConversions.h>
 
 #include <hpp/fcl/BVH/BVH_model.h>
+#include <hpp/fcl/shape/geometric_shapes.h>
+#include <pinocchio/spatial/fcl-pinocchio-conversions.hpp>
+
+namespace
+{
+
+  sofa::component::topology::container::constant::MeshTopology::SPtr
+  fclBaseShapeGeometryToSofaTopology(const std::shared_ptr<hpp::fcl::CollisionGeometry> &geom, 
+    const pinocchio::SE3& tf,
+    const Eigen::Vector3d& scale)
+  {
+    sofa::component::topology::container::constant::MeshTopology::SPtr meshTopology = nullptr;
+
+    // we do not need dynamic cast safe checking here as type is ensured by the switch/case on node type,
+    // but as we do not care about high performances here and prefer safer code
+    switch (geom->getNodeType())
+    {
+    case hpp::fcl::GEOM_BOX:
+    {
+      const auto boxGeom = std::dynamic_pointer_cast<hpp::fcl::Box>(geom);
+      assert(boxGeom);
+      meshTopology = sofa::core::objectmodel::New<sofa::component::topology::container::constant::MeshTopology>();
+      meshTopology->setName("box");
+
+      // add box points
+      auto boxPts = std::vector<Eigen::Vector3d>();
+      boxPts.emplace_back(+boxGeom->halfSide[0], -boxGeom->halfSide[1], -boxGeom->halfSide[2]); // 0
+      boxPts.emplace_back(+boxGeom->halfSide[0], -boxGeom->halfSide[1], +boxGeom->halfSide[2]); // 1
+      boxPts.emplace_back(-boxGeom->halfSide[0], -boxGeom->halfSide[1], +boxGeom->halfSide[2]); // 2
+      boxPts.emplace_back(-boxGeom->halfSide[0], -boxGeom->halfSide[1], -boxGeom->halfSide[2]); // 3
+      boxPts.emplace_back(+boxGeom->halfSide[0], +boxGeom->halfSide[1], -boxGeom->halfSide[2]); // 4
+      boxPts.emplace_back(-boxGeom->halfSide[0], +boxGeom->halfSide[1], -boxGeom->halfSide[2]); // 5
+      boxPts.emplace_back(-boxGeom->halfSide[0], +boxGeom->halfSide[1], +boxGeom->halfSide[2]); // 6
+      boxPts.emplace_back(+boxGeom->halfSide[0], +boxGeom->halfSide[1], +boxGeom->halfSide[2]); // 7
+
+      // apply transfrom and set to mesh data
+      const hpp::fcl::Transform3f fclTf = pinocchio::toFclTransform3f(tf);
+      for(const auto pt: boxPts)
+      {
+        const auto ptTf = fclTf.transform(pt).cwiseProduct(scale);
+
+        meshTopology->addPoint(ptTf[0], ptTf[1], ptTf[2]);
+      }
+      // add faces
+      meshTopology->addQuad(0, 1, 2, 3);
+      meshTopology->addQuad(4, 5, 6, 7);
+      meshTopology->addQuad(4, 7, 1, 0);
+      meshTopology->addQuad(3, 2, 6, 5);
+      meshTopology->addQuad(1, 7, 6, 2);
+      meshTopology->addQuad(0, 3, 5, 4);
+      break;
+    }
+    default:
+      // unsupported fcl geometry node type, return nullptr
+      return meshTopology;
+      break;
+    }
+
+    return meshTopology;
+  }
+
+} // anonymous namespace
 
 namespace sofa::rigidbodydynamics
 {
   sofa::component::topology::container::constant::MeshTopology::SPtr
-  fclGeometryToSofaTopology(const std::shared_ptr<hpp::fcl::CollisionGeometry> &geom)
+  fclGeometryToSofaTopology(const std::shared_ptr<hpp::fcl::CollisionGeometry> &geom, 
+    const pinocchio::SE3& tf,
+    const Eigen::Vector3d& scale)
   {
-    const auto visualBodyMesh = sofa::core::objectmodel::New<sofa::component::topology::container::constant::MeshTopology>();
-    visualBodyMesh->setName("mesh");
+    sofa::component::topology::container::constant::MeshTopology::SPtr meshTopology = nullptr;
 
+    // we do not need dynamic cast safe checking here as type is ensured by the switch/case on object type,
+    // but as we do not care about high performances here and prefer safer code
     switch (geom->getObjectType())
     {
     case hpp::fcl::OT_BVH:
     {
-      // we do not need dynamic cast safe checking here as type is ensured by the switch/case on object type,
-      // but as we do not care about high performances here we prefer safer code
-      auto bvh_geom = std::dynamic_pointer_cast<hpp::fcl::BVHModelBase>(geom);
-      assert(bvh_geom);
-      if (bvh_geom->getModelType() == hpp::fcl::BVH_MODEL_TRIANGLES)
+      const auto bvhGeom = std::dynamic_pointer_cast<hpp::fcl::BVHModelBase>(geom);
+      assert(bvhGeom);
+      meshTopology = sofa::core::objectmodel::New<sofa::component::topology::container::constant::MeshTopology>();
+      meshTopology->setName("mesh");
+      if (bvhGeom->getModelType() == hpp::fcl::BVH_MODEL_TRIANGLES)
       {
         // reconstruct mesh
-        Eigen::Vector3d scale = Eigen::Vector3d::Ones(); // TODO use geom.meshScale instead
-        for (auto vertIdx = 0ul; vertIdx < bvh_geom->num_vertices; ++vertIdx)
+        const hpp::fcl::Transform3f fclTf = pinocchio::toFclTransform3f(tf);
+        for (auto vertIdx = 0ul; vertIdx < bvhGeom->num_vertices; ++vertIdx)
         {
-          auto fclVert = bvh_geom->vertices[vertIdx];
-          visualBodyMesh->addPoint(fclVert[0] * scale[0], fclVert[1] * scale[1], fclVert[2] * scale[2]);
+          const auto fclVert = fclTf.transform(bvhGeom->vertices[vertIdx]).cwiseProduct(scale);
+          meshTopology->addPoint(fclVert[0], fclVert[1], fclVert[2]);
         }
-        for (auto triIdx = 0ul; triIdx < bvh_geom->num_tris; ++triIdx)
+        for (auto triIdx = 0ul; triIdx < bvhGeom->num_tris; ++triIdx)
         {
-          auto fclTri = bvh_geom->tri_indices[triIdx];
-          visualBodyMesh->addTriangle(fclTri[0], fclTri[1], fclTri[2]);
+          const auto& fclTri = bvhGeom->tri_indices[triIdx];
+          meshTopology->addTriangle(fclTri[0], fclTri[1], fclTri[2]);
         }
       }
+      break;
     }
-    break;
-
+    case hpp::fcl::OT_GEOM:
+      meshTopology = fclBaseShapeGeometryToSofaTopology(geom, tf, scale);
+      break;
     default:
-      // uunsupported fcl geometry type
-      return nullptr;
+      // uunsupported fcl geometry object type, return nullptr
+      return meshTopology;
       break;
     }
 
-    return visualBodyMesh;
+    return meshTopology;
   }
 
 } // namespace sofa::rigidbodydynamics

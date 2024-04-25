@@ -215,18 +215,9 @@ namespace sofa::rigidbodydynamics
           const auto &geom = visualModel->geometryObjects[geomIdx];
 
           const auto visualBodyNode = visualNode->createChild(geom.name);
-          // const auto visualBodyRigid = New<MechanicalObjectRigid3>();
-          // // visualBodyNode->addObject(visualBodyRigid);
-          // // visualBodyRigid->setName("rigid");
-          // // TODO set geom.placement as mech object pos
-          // auto visualBodyRigidwx = helper::getWriteAccessor(visualBodyRigid->x);
-          // // placement is local pose w.r.t. parent joint frame
-          // visualBodyRigidwx[0] = sofa::rigidbodydynamics::toSofaType(geom.placement);
-          // visualBodyRigid->init(); // XXX necessary ?
-
           msg_info() << "joint[" << jointIdx << "]:geom name: " << geom.name << " / parent joint: " << geom.parentJoint << " / object type: " << static_cast<int>(geom.fcl->getObjectType()) << " / node type: " << static_cast<int>(geom.fcl->getNodeType());
 
-          auto visualBodyMesh = sofa::rigidbodydynamics::fclGeometryToSofaTopology(geom.geometry);
+          auto visualBodyMesh = sofa::rigidbodydynamics::fclGeometryToSofaTopology(geom.geometry, geom.placement, geom.meshScale);
           if (not visualBodyMesh)
           {
             msg_error() << "Failed to convert pinocchio FCL geometry to Sofa MeshTopology";
@@ -238,12 +229,12 @@ namespace sofa::rigidbodydynamics
 
           // add visual openGL model (should be linked automatically to the topology)
           auto visualBodyModel = New<sofa::gl::component::rendering3d::OglModel>();
-          visualBodyNode->addObject(visualBodyModel);
           visualBodyModel->setName("visualModel");
           visualBodyModel->l_topology = visualBodyMesh;
           visualBodyModel->init();
           visualBodyModel->initVisual();
           visualBodyModel->updateVisual();
+          visualBodyNode->addObject(visualBodyModel);
 
           const auto visualMapping = New<sofa::component::mapping::nonlinear::RigidMapping<Rigid3Types, Vec3Types>>();
           visualMapping->setName("visualMapping");
