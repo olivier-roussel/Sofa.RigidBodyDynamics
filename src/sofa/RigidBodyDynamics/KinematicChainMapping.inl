@@ -182,36 +182,82 @@ namespace sofa::component::mapping
     msg_info() << "dataVecOut2Force = " << dataVecOut2Force.size();
     msg_info() << "dataVecInForce = " << dataVecInForce.size();
 
+    // dataVecOut1Force will be the resulting torque on each joint
     InDataVecDeriv *dgdqT_w = dataVecOut1Force[0];
     helper::WriteAccessor<InDataVecDeriv> accessor_dgdqT_w(dgdqT_w);
     msg_info() << "dataVecOut1Force dgdqT_w size: " << accessor_dgdqT_w.size();
 
+    // dataVecInForce is a vector of spatial forces for each body
     const OutDataVecDeriv *wrench_w = dataVecInForce[0];
     helper::ReadAccessor<OutDataVecDeriv> accessor_wrench_w(wrench_w);
     msg_info() << "dataVecInForce accessor_wrench_w size = " << accessor_wrench_w.size();
     // assert(dgdq_w->getValue().size() == m_data->J.cols());
     for(auto i = 0ul; i < accessor_wrench_w.size(); ++i)
     {
-      msg_info() << "w[" << i << "]: " << accessor_wrench_w[i];
+      msg_info() << "in force[" << i << "]: " << accessor_wrench_w[i];
     }
 
-    msg_info() << "pinocchio gravity g = " << m_data->g;
-
-    Eigen::VectorXd jointTorques = Eigen::VectorXd::Zero(m_model->nv);
+    Eigen::VectorXd jointsTorques = Eigen::VectorXd::Zero(m_model->nv);
     for (auto jointIdx = 0ul; jointIdx < m_model->njoints; ++jointIdx)
     {
       // jointForce is a spatial force so 6-vector
       const Eigen::VectorXd jointForce = sofa::rigidbodydynamics::vectorToEigen(accessor_wrench_w[jointIdx], 6);
       pinocchio::Data::Matrix6x J(6, m_model->nv);
       pinocchio::getJointJacobian(*m_model, *m_data, jointIdx, pinocchio::LOCAL, J);
-      jointTorques += J.transpose() * jointForce;
+      msg_info() << "jointIdx[" << jointIdx << "]: J^T = " << J.transpose();
+      Eigen::VectorXd jointTorques = Eigen::VectorXd::Zero(m_model->nv);
+      jointTorques = J.transpose() * jointForce;
+      msg_info() << "jointIdx[" << jointIdx << "]: torque = " << jointTorques;
+      jointsTorques += jointTorques;
+      // jointsTorques += J.transpose() * jointForce;
     }
 
-    // for(auto i = 0ul; i < jointTorques.size(); ++i)
-    // {
-    //   accessor_dgdqT_w[i] = jointTorques[i];
-    // }
+    // XXX
+    for(auto i = 0ul; i < jointsTorques.size(); ++i)
+    {
+      msg_info() << "out tau[" << i << "] before: " << accessor_dgdqT_w[i];
+      accessor_dgdqT_w[i][0] += jointsTorques[i];
+      msg_info() << "out tau[" << i << "]: " << accessor_dgdqT_w[i];
+    }
 
+    msg_info() << "********* END KinematicChainMapping applyJT";
+  }
+
+  template <class TIn, class TInRoot, class TOut>
+  void KinematicChainMapping<TIn, TInRoot, TOut>::applyJT(
+      const core::ConstraintParams * cparams, const type::vector<InDataMatrixDeriv *> & dataMatOut1Const,
+      const type::vector<InRootDataMatrixDeriv *> & dataMatOut2Const,
+      const type::vector<const OutDataMatrixDeriv *> & dataMatInConst)
+  {
+    if (d_componentState.getValue() == sofa::core::objectmodel::ComponentState::Invalid)
+      return;
+
+    msg_info() << "********* KinematicChainMapping applyJT On MatrixDeriv";
+    msg_info() << "dataVecOut1Force = " << dataMatOut1Const.size();
+    msg_info() << "dataVecOut2Force = " << dataMatOut2Const.size();
+    msg_info() << "dataVecInForce = " << dataMatInConst.size();
+
+    // dataVecOut1Force will be the resulting torque on each joint
+    InDataMatrixDeriv *dgdqT_w = dataMatOut1Const[0];
+    helper::WriteAccessor<InDataMatrixDeriv> accessor_dgdqT_w(dgdqT_w);
+    // msg_info() << "dataMatOut1Const dgdqT_w CRS matrix rowBSize = " << accessor_dgdqT_w.rowBSize();
+    // msg_info() << "dataMatOut1Const dgdqT_w CRS matrix colBSize = " << accessor_dgdqT_w.colBSize();
+    msg_info() << "dataMatOut1Const dgdqT_w CRS matrix: " << accessor_dgdqT_w;
+
+    auto outMatWa  = sofa::helper::getWriteAccessor(*dgdqT_w);
+    msg_info() << "dataMatOut1Const dgdqT_w CRS constraint empty ? " << outMatWa->empty();
+
+    // dataMatInConst 
+    const OutDataMatrixDeriv *wrench_w = dataMatInConst[0];
+    helper::ReadAccessor<OutDataMatrixDeriv> accessor_wrench_w(wrench_w);
+    // msg_info() << "dataMatInConst wrench_w CRS matrix rowBSize = " << accessor_wrench_w.rowBSize();
+    // msg_info() << "dataMatInConst wrench_w CRS matrix colBSize = " << accessor_wrench_w.colBSize();
+    msg_info() << "dataMatInConst wrench_w CRS matrix: " << accessor_wrench_w;
+
+    auto inMatRa  = sofa::helper::getReadAccessor(*wrench_w);
+    msg_info() << "dataMatInConst wrench_w CRS constraint empty ? " << inMatRa->empty();
+
+    msg_info() << "********* END KinematicChainMapping applyJT On MatrixDeriv";
   }
 
   template <class TIn, class TInRoot, class TOut>

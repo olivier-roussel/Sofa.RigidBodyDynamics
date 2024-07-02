@@ -92,10 +92,7 @@ namespace sofa::component::mapping
     void applyJT(
         const core::ConstraintParams * /*cparams*/, const type::vector<InDataMatrixDeriv *> & /* dataMatOut1Const */,
         const type::vector<InRootDataMatrixDeriv *> & /*dataMatOut2Const*/,
-        const type::vector<const OutDataMatrixDeriv *> & /*dataMatInConst*/) override
-    {
-      // no op
-    }
+        const type::vector<const OutDataMatrixDeriv *> & /*dataMatInConst*/) override;
 
     void applyDJT(const core::MechanicalParams * /*mparams*/, core::MultiVecDerivId /*inForce*/, core::ConstMultiVecDerivId /*outForce*/) override
     {

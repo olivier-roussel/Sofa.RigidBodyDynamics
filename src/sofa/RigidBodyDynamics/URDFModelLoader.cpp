@@ -148,16 +148,10 @@ namespace sofa::rigidbodydynamics
 
     jointsNode->addObject(jointsDofs);
 
-    // TODO -> set actual mass per body and other inertia properties
-    const auto jointsMass = New<sofa::component::mass::UniformMass<Vec1Types>>();
-    jointsMass->setName("mass");
-    jointsMass->setTotalMass(1.);
-    jointsNode->addObject(jointsMass);
-
     // spring to control robot dofs to desired dofs set by rest position (x0)
     const auto restShapeForceField = New<sofa::component::solidmechanics::spring::RestShapeSpringsForceField<Vec1Types>>();
     restShapeForceField->setName("RestShapeSpringsForceField");
-    std::vector<double> springVal = {1e10};
+    std::vector<double> springVal = {1e3};
     restShapeForceField->d_stiffness.setValue(springVal);
     sofa::type::vector<sofa::Index> pointsIndexes;
     for (sofa::Index idx = 0ul; idx < model->nq; ++idx)
@@ -189,18 +183,41 @@ namespace sofa::rigidbodydynamics
     kinematicChainMapping->addOutputModel(bodiesDof.get());
     bodiesNode->addObject(kinematicChainMapping);
 
-    for (pinocchio::JointIndex jointIdx = 0; jointIdx < model->njoints; ++jointIdx)
+    // // XXX spring on robot bodies to test applyJT
+    // const auto restShapeForceField2 = New<sofa::component::solidmechanics::spring::RestShapeSpringsForceField<Rigid3Types>>();
+    // restShapeForceField2->setName("bodies_RestShapeSpringsForceField");
+    // std::vector<double> springVal2 = {1e8};
+    // restShapeForceField2->d_stiffness.setValue(springVal2);
+    // sofa::type::vector<sofa::Index> pointsIndexes2;
+    // for (sofa::Index idx = 0ul; idx < model->nq; ++idx)
+    // {
+    //   pointsIndexes2.push_back(idx);
+    // }
+    // restShapeForceField2->d_points.setValue(pointsIndexes2);
+    // bodiesNode->addObject(restShapeForceField2);
+
+    // TODO
+    // const auto restShapeForceField2 = New<sofa::component::solidmechanics::ConstantForceField<Rigid3Types>>();
+
+
+    for (pinocchio::JointIndex bodyIdx = 0; bodyIdx < model->nbodies; ++bodyIdx)
     {
-      const auto bodyNode = bodiesNode->createChild("Body_" + std::to_string(jointIdx));
+      const auto bodyNode = bodiesNode->createChild("Body_" + std::to_string(bodyIdx));
 
       const auto bodyRigid = New<MechanicalObjectRigid3>();
       bodyRigid->setName("bodyRigid");
       bodyNode->addObject(bodyRigid);
 
+      // const auto bodyMass = New<sofa::component::mass::UniformMass<Rigid3Types>>();
+      // bodyMass->setName("mass");
+      // const auto& bodyInertia = model->inertias[bodyIdx];
+      // bodyMass->setTotalMass(bodyInertia.mass());
+      // bodyNode->addObject(bodyMass);
+
       const auto bodyMapping = New<sofa::component::mapping::nonlinear::RigidMapping<Rigid3Types, Rigid3Types>>();
       bodyMapping->setName("bodyMapping");
       bodyMapping->setModels(bodiesDof.get(), bodyRigid.get());
-      bodyMapping->d_index = jointIdx;
+      bodyMapping->d_index = bodyIdx;
       bodyMapping->d_globalToLocalCoords = false;
       bodyNode->addObject(bodyMapping);
 
@@ -208,7 +225,7 @@ namespace sofa::rigidbodydynamics
       const auto visualNode = bodyNode->createChild("Visual");
 
       // get joint associated geometries
-      const auto visualGeomIndexesIt = kinematicChainMapping->visualData()->innerObjects.find(jointIdx);
+      const auto visualGeomIndexesIt = kinematicChainMapping->visualData()->innerObjects.find(bodyIdx);
       if (visualGeomIndexesIt != kinematicChainMapping->visualData()->innerObjects.end())
       {
         for (const auto &geomIdx : visualGeomIndexesIt->second)
@@ -216,7 +233,7 @@ namespace sofa::rigidbodydynamics
           const auto &geom = visualModel->geometryObjects[geomIdx];
 
           const auto visualBodyNode = visualNode->createChild(geom.name);
-          msg_info() << "joint[" << jointIdx << "]:geom name: " << geom.name << " / parent joint: " << geom.parentJoint << " / object type: " << static_cast<int>(geom.fcl->getObjectType()) << " / node type: " << static_cast<int>(geom.fcl->getNodeType());
+          msg_info() << "body[" << bodyIdx << "]:geom name: " << geom.name << " / parent joint: " << geom.parentJoint << " / object type: " << static_cast<int>(geom.fcl->getObjectType()) << " / node type: " << static_cast<int>(geom.fcl->getNodeType());
 
           auto visualBodyMesh = sofa::rigidbodydynamics::fclGeometryToSofaTopology(geom.geometry, geom.placement, geom.meshScale);
           if (not visualBodyMesh)
