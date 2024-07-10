@@ -50,7 +50,7 @@ namespace sofa::rigidbodydynamics
   template <typename Vector6Like>
   inline sofa::defaulttype::RigidDeriv<3, typename Vector6Like::Scalar> vec6ToSofaType(const Vector6Like &in_vel)
   {
-    return sofa::defaulttype::RigidDeriv<3, typename Vector6Like::Scalar>(vec3ToSofaType<typename Vector6Like::Scalar>(in_vel.template head<3>()), vec3ToSofaType<typename Vector6Like::Scalar>(in_vel.template head<3>()));
+    return sofa::defaulttype::RigidDeriv<3, typename Vector6Like::Scalar>(vec3ToSofaType<typename Vector6Like::Scalar>(in_vel.template head<3>()), vec3ToSofaType<typename Vector6Like::Scalar>(in_vel.template tail<3>()));
   }
 
   template <typename VectorVec1Type>
