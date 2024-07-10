@@ -32,6 +32,7 @@
 #include <pinocchio/multibody/fcl.hpp>
 #include <pinocchio/algorithm/jacobian.hpp>
 #include <pinocchio/algorithm/geometry.hpp>
+#include <pinocchio/algorithm/frames.hpp>
 
 using namespace sofa::defaulttype;
 
@@ -95,13 +96,13 @@ namespace sofa::component::mapping
     assert(m_collisionModel);
     assert(m_visualModel);
 
-    msg_info() << "========= KinematicChainMapping apply";
+    // msg_info() << "========= KinematicChainMapping apply";
     if (d_componentState.getValue() == sofa::core::objectmodel::ComponentState::Invalid)
       return;
 
     // map in configuration to pinocchio
     InVecCoord in_dofs = dataVecInPos[0]->getValue();
-    msg_info() << "in_dofs size: " << in_dofs.size() << " / model nq = " << m_model->nq;
+    // msg_info() << "in_dofs size: " << in_dofs.size() << " / model nq = " << m_model->nq;
     assert(in_dofs.size() == m_model->nv);
     Eigen::VectorXd q = sofa::rigidbodydynamics::vectorVec1ToEigen(in_dofs, m_model->nq);
 
@@ -111,25 +112,28 @@ namespace sofa::component::mapping
     // be used by applyJ and not apply function, but this is done here 
     // to avoid duplicate computation of forward kinematics
     pinocchio::computeJointJacobians(*m_model, *m_data, q);
-    msg_info() << " fwd kinematics computed";
+    // msg_info() << " fwd kinematics computed";
 
     // Update Geometry models
     pinocchio::updateGeometryPlacements(*m_model, *m_data, *m_collisionModel, *m_collisionData);
     pinocchio::updateGeometryPlacements(*m_model, *m_data, *m_visualModel, *m_visualData);
-    msg_info() << " geometry placements updated";
+    // msg_info() << " geometry placements updated";
 
-    // msg_info() << " Robot data oMi vector size: " << m_data->oMi.size();
+    pinocchio::updateFramePlacements(*m_model, *m_data);
+    // msg_info() << " frames placements updated";
 
     // Single output vector of size njoints
     OutDataVecCoord *g_w = dataVecOutPos[0];
 
-    assert(g_w->getValue().size() == m_data->oMi.size());
-
     helper::WriteAccessor<OutDataVecCoord> accessor_g_w(g_w);
-    for (auto jointIdx = 0ul; jointIdx < m_model->njoints; ++jointIdx)
+    for (auto bodyIdx = 0ul; bodyIdx < m_model->nbodies; ++bodyIdx)
     {
-      accessor_g_w[jointIdx] = sofa::rigidbodydynamics::se3ToSofaType(m_data->oMi[jointIdx]);
+      const auto& frameIdx = m_bodyCoMFrames[bodyIdx];
+      // accessor_g_w[bodyIdx] = sofa::rigidbodydynamics::se3ToSofaType(m_data->oMi[bodyIdx]);
+      accessor_g_w[bodyIdx] = sofa::rigidbodydynamics::se3ToSofaType(m_data->oMf[frameIdx]);
     }
+    // msg_info() << " oMi size : " << m_data->oMi.size();
+    // msg_info() << " oMf size : " << m_data->oMf.size();
   }
 
   template <class TIn, class TInRoot, class TOut>
@@ -138,15 +142,14 @@ namespace sofa::component::mapping
       const type::vector<const InDataVecDeriv *> &dataVecInVel,
       const type::vector<const InRootDataVecDeriv *> &dataVecInRootVel)
   {
-    msg_info() << "********* KinematicChainMapping applyJ";
+    // msg_info() << "********* KinematicChainMapping applyJ";
     if (d_componentState.getValue() == sofa::core::objectmodel::ComponentState::Invalid)
       return;
 
     // map in configuration to pinocchio
-    // Eigen::VectorXd dq = Eigen::VectorXd::Zero(m_model->nv);
     InVecDeriv in_dofs = dataVecInVel[0]->getValue();
 
-    msg_info() << "in_dofs size: " << in_dofs.size() << " / model nv = " << m_model->nv;
+    // msg_info() << "in_dofs size: " << in_dofs.size() << " / model nv = " << m_model->nv;
     assert(in_dofs.size() == m_model->nv);
     Eigen::VectorXd dq = sofa::rigidbodydynamics::vectorVec1ToEigen(in_dofs, m_model->nv);
 
@@ -156,13 +159,13 @@ namespace sofa::component::mapping
     assert(dgdq_w->getValue().size() == m_model->njoints);
 
     helper::WriteAccessor<OutDataVecDeriv> accessor_dgdq_w(dgdq_w);
-    for (auto jointIdx = 0ul; jointIdx < m_model->njoints; ++jointIdx)
+    for (auto bodyIdx = 0ul; bodyIdx < m_model->nbodies; ++bodyIdx)
     {
       pinocchio::Data::Matrix6x J(6, m_model->nv);
-      pinocchio::getJointJacobian(*m_model, *m_data, jointIdx, pinocchio::LOCAL, J);
+      const auto& frameIdx = m_bodyCoMFrames[bodyIdx];
+      pinocchio::getFrameJacobian(*m_model, *m_data, frameIdx, pinocchio::LOCAL_WORLD_ALIGNED, J);
       Eigen::VectorXd dg = J * dq;
-      accessor_dgdq_w[jointIdx] = sofa::rigidbodydynamics::vec6ToSofaType<Eigen::VectorXd>(dg);
-      // msg_info() << "KinematicChainMapping: setting pose: " << m_data->oMi[jointIdx] << " to joint body[" << jointIdx << "]";
+      accessor_dgdq_w[bodyIdx] = sofa::rigidbodydynamics::vec6ToSofaType<Eigen::VectorXd>(dg);
     }
   }
 
@@ -175,52 +178,55 @@ namespace sofa::component::mapping
     if (d_componentState.getValue() == sofa::core::objectmodel::ComponentState::Invalid)
       return;
 
-    msg_info() << "********* KinematicChainMapping applyJT";
+    // msg_info() << "********* KinematicChainMapping applyJT";
 
     // Single output vector of size njoints
-    msg_info() << "dataVecOut1Force = " << dataVecOut1Force.size();
-    msg_info() << "dataVecOut2Force = " << dataVecOut2Force.size();
-    msg_info() << "dataVecInForce = " << dataVecInForce.size();
+    // msg_info() << "dataVecOut1Force = " << dataVecOut1Force.size();
+    // msg_info() << "dataVecOut2Force = " << dataVecOut2Force.size();
+    // msg_info() << "dataVecInForce = " << dataVecInForce.size();
 
     // dataVecOut1Force will be the resulting torque on each joint
     InDataVecDeriv *dgdqT_w = dataVecOut1Force[0];
     helper::WriteAccessor<InDataVecDeriv> accessor_dgdqT_w(dgdqT_w);
-    msg_info() << "dataVecOut1Force dgdqT_w size: " << accessor_dgdqT_w.size();
+    // size = nq
+    // msg_info() << "dataVecOut1Force dgdqT_w size: " << accessor_dgdqT_w.size();
 
     // dataVecInForce is a vector of spatial forces for each body
     const OutDataVecDeriv *wrench_w = dataVecInForce[0];
     helper::ReadAccessor<OutDataVecDeriv> accessor_wrench_w(wrench_w);
-    msg_info() << "dataVecInForce accessor_wrench_w size = " << accessor_wrench_w.size();
+    // size = nbodies
+    // msg_info() << "dataVecInForce accessor_wrench_w size = " << accessor_wrench_w.size();
     // assert(dgdq_w->getValue().size() == m_data->J.cols());
-    for(auto i = 0ul; i < accessor_wrench_w.size(); ++i)
-    {
-      msg_info() << "in force[" << i << "]: " << accessor_wrench_w[i];
-    }
+    // for(auto i = 0ul; i < accessor_wrench_w.size(); ++i)
+    // {
+    //   msg_info() << "in force[" << i << "]: " << accessor_wrench_w[i];
+    // }
 
     Eigen::VectorXd jointsTorques = Eigen::VectorXd::Zero(m_model->nv);
-    for (auto jointIdx = 0ul; jointIdx < m_model->njoints; ++jointIdx)
+    for (auto bodyIdx = 0ul; bodyIdx < m_model->nbodies; ++bodyIdx)
     {
-      // jointForce is a spatial force so 6-vector
-      const Eigen::VectorXd jointForce = sofa::rigidbodydynamics::vectorToEigen(accessor_wrench_w[jointIdx], 6);
+      // bodyForce is a spatial force so 6-vector
+      const Eigen::VectorXd bodyForce = sofa::rigidbodydynamics::vectorToEigen(accessor_wrench_w[bodyIdx], 6);
       pinocchio::Data::Matrix6x J(6, m_model->nv);
-      pinocchio::getJointJacobian(*m_model, *m_data, jointIdx, pinocchio::LOCAL, J);
-      msg_info() << "jointIdx[" << jointIdx << "]: J^T = " << J.transpose();
+      const auto& frameIdx = m_bodyCoMFrames[bodyIdx];
+      pinocchio::getFrameJacobian(*m_model, *m_data, frameIdx, pinocchio::LOCAL_WORLD_ALIGNED, J);
+      // msg_info() << "bodyIdx[" << bodyIdx << "]: bodyForce = " << bodyForce;
+      // msg_info() << "bodyIdx[" << bodyIdx << "]: J^T = " << J.transpose();
       Eigen::VectorXd jointTorques = Eigen::VectorXd::Zero(m_model->nv);
-      jointTorques = J.transpose() * jointForce;
-      msg_info() << "jointIdx[" << jointIdx << "]: torque = " << jointTorques;
+      jointTorques = J.transpose() * bodyForce;
+      // msg_info() << "bodyIdx[" << bodyIdx << "]: torque = " << jointTorques;
       jointsTorques += jointTorques;
-      // jointsTorques += J.transpose() * jointForce;
+      // jointsTorques += J.transpose() * bodyForce;
     }
 
-    // XXX
     for(auto i = 0ul; i < jointsTorques.size(); ++i)
     {
-      msg_info() << "out tau[" << i << "] before: " << accessor_dgdqT_w[i];
+      // msg_info() << "out tau[" << i << "] before: " << accessor_dgdqT_w[i];
       accessor_dgdqT_w[i][0] += jointsTorques[i];
-      msg_info() << "out tau[" << i << "]: " << accessor_dgdqT_w[i];
+      // msg_info() << "out tau[" << i << "]: " << accessor_dgdqT_w[i];
     }
 
-    msg_info() << "********* END KinematicChainMapping applyJT";
+    // msg_info() << "********* END KinematicChainMapping applyJT";
   }
 
   template <class TIn, class TInRoot, class TOut>
@@ -293,6 +299,13 @@ namespace sofa::component::mapping
     m_visualModel = visualModel;
     // build visual data
     m_visualData = std::make_shared<pinocchio::GeometryData>(*m_visualModel);
+  }
+
+  template <class TIn, class TInRoot, class TOut>
+  void KinematicChainMapping<TIn, TInRoot, TOut>::setBodyCoMFrames(const std::vector<pinocchio::FrameIndex>& bodyCoMFrames)
+  {
+    assert(bodyCoMFrames);
+    m_bodyCoMFrames = bodyCoMFrames;
   }
 
   template <class TIn, class TInRoot, class TOut>

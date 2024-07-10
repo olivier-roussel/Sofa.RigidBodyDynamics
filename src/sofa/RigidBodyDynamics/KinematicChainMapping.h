@@ -112,6 +112,8 @@ namespace sofa::component::mapping
 
     void setVisualModel(const std::shared_ptr<pinocchio::GeometryModel> &visualModel);
 
+    void setBodyCoMFrames(const std::vector<pinocchio::FrameIndex>& bodyCoMFrames);
+
     const std::shared_ptr<pinocchio::GeometryData>& collisionData() const;
 
     const std::shared_ptr<pinocchio::GeometryData>& visualData() const;
@@ -141,6 +143,7 @@ namespace sofa::component::mapping
     std::shared_ptr<pinocchio::Data> m_data;
     std::shared_ptr<pinocchio::GeometryData> m_collisionData;
     std::shared_ptr<pinocchio::GeometryData> m_visualData;
+    std::vector<pinocchio::FrameIndex> m_bodyCoMFrames;
 
     using core::Multi2Mapping<TIn, TInRoot, TOut>::d_componentState;
   };

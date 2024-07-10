@@ -91,6 +91,7 @@ namespace sofa::rigidbodydynamics
     std::shared_ptr<pinocchio::Model> model;
     std::shared_ptr<pinocchio::GeometryModel> collisionModel;
     std::shared_ptr<pinocchio::GeometryModel> visualModel;
+    std::vector<pinocchio::FrameIndex> bodyCoMFrames;
 
     try
     {
@@ -108,6 +109,15 @@ namespace sofa::rigidbodydynamics
       visualModel = std::make_shared<pinocchio::GeometryModel>();
       pinocchio::urdf::buildGeom(*model, urdfFilename, pinocchio::VISUAL, *visualModel, modelDir);
       // msg_info() << "Built robot visual model from URDF file: " << urdf_filename;
+
+      // add a frame for each body centered on its CoM and that will be used as body DoF by SOFA
+      bodyCoMFrames.reserve(model->nbodies);
+      for (pinocchio::JointIndex bodyIdx = 0; bodyIdx < model->nbodies; ++bodyIdx)
+      {
+        const pinocchio::SE3 bodyCoM_i = pinocchio::SE3(Eigen::Matrix3d::Identity(), model->inertias[bodyIdx].lever());
+        const auto bodyFrameCoM = pinocchio::Frame{"Body_" + std::to_string(bodyIdx) + "_CoM", bodyIdx, bodyIdx, bodyCoM_i, pinocchio::FrameType::OP_FRAME};
+        bodyCoMFrames.push_back(model->addFrame(bodyFrameCoM));
+      }
     }
     catch (std::exception &e)
     {
@@ -166,6 +176,7 @@ namespace sofa::rigidbodydynamics
     // create mapping between robot joints dofs and its bodies placements
     const auto kinematicChainMapping = New<sofa::component::mapping::KinematicChainMapping<Vec1Types, Rigid3Types, Rigid3Types>>();
     kinematicChainMapping->setName("kinematicChainMapping");
+    kinematicChainMapping->setBodyCoMFrames(bodyCoMFrames);
     kinematicChainMapping->f_printLog.setValue(true);
     kinematicChainMapping->setModel(model);
     kinematicChainMapping->setCollisionModel(collisionModel);
@@ -177,7 +188,7 @@ namespace sofa::rigidbodydynamics
     // one dof container for all bodies version
     const auto bodiesDof = New<MechanicalObjectRigid3>();
     bodiesDof->setName("bodiesDofs");
-    bodiesDof->resize(model->njoints);
+    bodiesDof->resize(model->nbodies);
     bodiesNode->addObject(bodiesDof);
 
     kinematicChainMapping->addOutputModel(bodiesDof.get());
@@ -206,6 +217,8 @@ namespace sofa::rigidbodydynamics
 
       const auto bodyRigid = New<MechanicalObjectRigid3>();
       bodyRigid->setName("bodyRigid");
+      const Eigen::Vector3d invBodyCoMTranslation = -model->inertias[bodyIdx].lever();
+      bodyRigid->setTranslation(invBodyCoMTranslation.x(), invBodyCoMTranslation.y(), invBodyCoMTranslation.z());
       bodyNode->addObject(bodyRigid);
 
       // const auto bodyMass = New<sofa::component::mass::UniformMass<Rigid3Types>>();
