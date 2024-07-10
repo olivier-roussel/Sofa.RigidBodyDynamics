@@ -215,17 +215,24 @@ namespace sofa::rigidbodydynamics
     {
       const auto bodyNode = bodiesNode->createChild("Body_" + std::to_string(bodyIdx));
 
+      const auto& bodyInertia = model->inertias[bodyIdx];
+
       const auto bodyRigid = New<MechanicalObjectRigid3>();
       bodyRigid->setName("bodyRigid");
-      const Eigen::Vector3d invBodyCoMTranslation = -model->inertias[bodyIdx].lever();
+      const Eigen::Vector3d invBodyCoMTranslation = -bodyInertia.lever();
       bodyRigid->setTranslation(invBodyCoMTranslation.x(), invBodyCoMTranslation.y(), invBodyCoMTranslation.z());
       bodyNode->addObject(bodyRigid);
 
-      // const auto bodyMass = New<sofa::component::mass::UniformMass<Rigid3Types>>();
-      // bodyMass->setName("mass");
-      // const auto& bodyInertia = model->inertias[bodyIdx];
+      const auto bodyMass = New<sofa::component::mass::UniformMass<Rigid3Types>>();
+      bodyMass->setName("mass");
       // bodyMass->setTotalMass(bodyInertia.mass());
-      // bodyNode->addObject(bodyMass);
+      sofa::defaulttype::Rigid3dMass rigidMass;
+      rigidMass.mass = bodyInertia.mass();
+      rigidMass.inertiaMatrix = sofa::rigidbodydynamics::mat3ToSofaType(bodyInertia.inertia().matrix());
+      rigidMass.volume = 1.; // TODO: necessary ? from multiple geometries ? visual, collision ?
+      rigidMass.recalc();
+      bodyMass->setMass(rigidMass);
+      bodyNode->addObject(bodyMass);
 
       const auto bodyMapping = New<sofa::component::mapping::nonlinear::RigidMapping<Rigid3Types, Rigid3Types>>();
       bodyMapping->setName("bodyMapping");

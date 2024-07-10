@@ -78,4 +78,18 @@ namespace sofa::rigidbodydynamics
     }
     return out;
   }
+
+  template <typename Scalar>
+  inline sofa::type::Mat<3, 3, Scalar> mat3ToSofaType(const Eigen::Matrix3<Scalar>& in_m)
+  {
+    sofa::type::Mat<3, 3, Scalar> out;
+    for(auto i = 0ul; i < 3; ++i)
+    {
+      for(auto j = 0ul; j < 3; ++j)
+      {
+        out(i, j) = in_m(i, j);
+      }
+    }
+    return out;
+  }
 } // namespace sofa::rigidbodydynamics
