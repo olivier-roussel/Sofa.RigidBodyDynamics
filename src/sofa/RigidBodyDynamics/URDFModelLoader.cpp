@@ -89,7 +89,7 @@ namespace sofa::rigidbodydynamics
     msg_info() << " Loading robot from URDF file: " << urdfFilename;
     msg_info() << "Model directory: " << modelDir;
     std::shared_ptr<pinocchio::Model> model;
-    std::shared_ptr<pinocchio::GeometryModel> collisionModel;
+    // std::shared_ptr<pinocchio::GeometryModel> collisionModel;
     std::shared_ptr<pinocchio::GeometryModel> visualModel;
     std::vector<pinocchio::FrameIndex> bodyCoMFrames;
 
@@ -108,8 +108,8 @@ namespace sofa::rigidbodydynamics
         msg_info() << "Joint[" << idxJoint << "]: " << model->names[idxJoint] << " / " << model->joints[idxJoint];
       }
 
-      collisionModel = std::make_shared<pinocchio::GeometryModel>();
-      pinocchio::urdf::buildGeom(*model, urdfFilename, pinocchio::COLLISION, *collisionModel, modelDir);
+      // collisionModel = std::make_shared<pinocchio::GeometryModel>();
+      // pinocchio::urdf::buildGeom(*model, urdfFilename, pinocchio::COLLISION, *collisionModel, modelDir);
       // msg_info() << "Built robot collision model from URDF file: " << urdf_filename;
 
       visualModel = std::make_shared<pinocchio::GeometryModel>();
@@ -185,7 +185,7 @@ namespace sofa::rigidbodydynamics
     kinematicChainMapping->setBodyCoMFrames(bodyCoMFrames);
     kinematicChainMapping->f_printLog.setValue(true);
     kinematicChainMapping->setModel(model);
-    kinematicChainMapping->setCollisionModel(collisionModel);
+    // kinematicChainMapping->setCollisionModel(collisionModel);
     kinematicChainMapping->setVisualModel(visualModel);
     // set mapping input1
     kinematicChainMapping->addInputModel1(jointsDofs.get());

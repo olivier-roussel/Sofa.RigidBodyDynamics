@@ -40,7 +40,7 @@ namespace sofa::component::mapping
 {
   template <class TIn, class TInRoot, class TOut>
   KinematicChainMapping<TIn, TInRoot, TOut>::KinematicChainMapping()
-      : d_modelDir(initData(&d_modelDir, std::string{}, "modelDir", "Directory containing robot models")), d_urdfFile(initData(&d_urdfFile, std::string{}, "urdfFile", "URDF file absolute path")), m_model{nullptr}, m_collisionModel{nullptr}, m_visualModel{nullptr}
+      : d_modelDir(initData(&d_modelDir, std::string{}, "modelDir", "Directory containing robot models")), d_urdfFile(initData(&d_urdfFile, std::string{}, "urdfFile", "URDF file absolute path")), m_model{nullptr}, /*m_collisionModel{nullptr},*/ m_visualModel{nullptr}
   {
   }
 
@@ -93,7 +93,7 @@ namespace sofa::component::mapping
     assert(dataVecInRootPos.size() <= 1); // one or zero free floating root dof
 
     assert(m_model);
-    assert(m_collisionModel);
+    // assert(m_collisionModel);
     assert(m_visualModel);
 
     // msg_info() << "========= KinematicChainMapping apply";
@@ -113,7 +113,7 @@ namespace sofa::component::mapping
     // msg_info() << " fwd kinematics & joint jacobians computed";
 
     // Update Geometry models
-    pinocchio::updateGeometryPlacements(*m_model, *m_data, *m_collisionModel, *m_collisionData);
+    // pinocchio::updateGeometryPlacements(*m_model, *m_data, *m_collisionModel, *m_collisionData);
     pinocchio::updateGeometryPlacements(*m_model, *m_data, *m_visualModel, *m_visualData);
     // msg_info() << " geometry placements updated";
 
@@ -276,14 +276,14 @@ namespace sofa::component::mapping
     m_data = std::make_shared<pinocchio::Data>(*m_model);
   }
 
-  template <class TIn, class TInRoot, class TOut>
-  void KinematicChainMapping<TIn, TInRoot, TOut>::setCollisionModel(const std::shared_ptr<pinocchio::GeometryModel> &collisionModel)
-  {
-    assert(collisionModel);
-    m_collisionModel = collisionModel;
-    // build collision data
-    m_collisionData = std::make_shared<pinocchio::GeometryData>(*m_collisionModel);
-  }
+  // template <class TIn, class TInRoot, class TOut>
+  // void KinematicChainMapping<TIn, TInRoot, TOut>::setCollisionModel(const std::shared_ptr<pinocchio::GeometryModel> &collisionModel)
+  // {
+  //   assert(collisionModel);
+  //   m_collisionModel = collisionModel;
+  //   // build collision data
+  //   m_collisionData = std::make_shared<pinocchio::GeometryData>(*m_collisionModel);
+  // }
 
   template <class TIn, class TInRoot, class TOut>
   void KinematicChainMapping<TIn, TInRoot, TOut>::setVisualModel(const std::shared_ptr<pinocchio::GeometryModel> &visualModel)
@@ -301,11 +301,11 @@ namespace sofa::component::mapping
     m_bodyCoMFrames = bodyCoMFrames;
   }
 
-  template <class TIn, class TInRoot, class TOut>
-  const std::shared_ptr<pinocchio::GeometryData> &KinematicChainMapping<TIn, TInRoot, TOut>::collisionData() const
-  {
-    return m_collisionData;
-  }
+  // template <class TIn, class TInRoot, class TOut>
+  // const std::shared_ptr<pinocchio::GeometryData> &KinematicChainMapping<TIn, TInRoot, TOut>::collisionData() const
+  // {
+  //   return m_collisionData;
+  // }
 
   template <class TIn, class TInRoot, class TOut>
   const std::shared_ptr<pinocchio::GeometryData> &KinematicChainMapping<TIn, TInRoot, TOut>::visualData() const
