@@ -106,13 +106,11 @@ namespace sofa::component::mapping
     assert(in_dofs.size() == m_model->nv);
     Eigen::VectorXd q = sofa::rigidbodydynamics::vectorVec1ToEigen(in_dofs, m_model->nq);
 
-    // Perform the forward kinematics over the kinematic tree
-    // pinocchio::forwardKinematics(*m_model, *m_data, q_in);
     // Computes joints Jacobians and forward kinematics. Jacobians will
     // be used by applyJ and not apply function, but this is done here 
     // to avoid duplicate computation of forward kinematics
     pinocchio::computeJointJacobians(*m_model, *m_data, q);
-    // msg_info() << " fwd kinematics computed";
+    // msg_info() << " fwd kinematics & joint jacobians computed";
 
     // Update Geometry models
     pinocchio::updateGeometryPlacements(*m_model, *m_data, *m_collisionModel, *m_collisionData);
@@ -132,8 +130,6 @@ namespace sofa::component::mapping
       // accessor_g_w[bodyIdx] = sofa::rigidbodydynamics::se3ToSofaType(m_data->oMi[bodyIdx]);
       accessor_g_w[bodyIdx] = sofa::rigidbodydynamics::se3ToSofaType(m_data->oMf[frameIdx]);
     }
-    // msg_info() << " oMi size : " << m_data->oMi.size();
-    // msg_info() << " oMf size : " << m_data->oMf.size();
   }
 
   template <class TIn, class TInRoot, class TOut>
@@ -161,7 +157,7 @@ namespace sofa::component::mapping
     helper::WriteAccessor<OutDataVecDeriv> accessor_dgdq_w(dgdq_w);
     for (auto bodyIdx = 0ul; bodyIdx < m_model->nbodies; ++bodyIdx)
     {
-      pinocchio::Data::Matrix6x J(6, m_model->nv);
+      pinocchio::Data::Matrix6x J = pinocchio::Data::Matrix6x::Zero(6, m_model->nv);
       const auto& frameIdx = m_bodyCoMFrames[bodyIdx];
       pinocchio::getFrameJacobian(*m_model, *m_data, frameIdx, pinocchio::LOCAL_WORLD_ALIGNED, J);
       Eigen::VectorXd dg = J * dq;
@@ -181,49 +177,46 @@ namespace sofa::component::mapping
     // msg_info() << "********* KinematicChainMapping applyJT";
 
     // Single output vector of size njoints
-    // msg_info() << "dataVecOut1Force = " << dataVecOut1Force.size();
-    // msg_info() << "dataVecOut2Force = " << dataVecOut2Force.size();
-    // msg_info() << "dataVecInForce = " << dataVecInForce.size();
+    msg_info() << "dataVecOut1Force = " << dataVecOut1Force.size();
+    msg_info() << "dataVecOut2Force = " << dataVecOut2Force.size();
+    msg_info() << "dataVecInForce = " << dataVecInForce.size();
 
     // dataVecOut1Force will be the resulting torque on each joint
     InDataVecDeriv *dgdqT_w = dataVecOut1Force[0];
     helper::WriteAccessor<InDataVecDeriv> accessor_dgdqT_w(dgdqT_w);
     // size = nq
-    // msg_info() << "dataVecOut1Force dgdqT_w size: " << accessor_dgdqT_w.size();
+    msg_info() << "dataVecOut1Force dgdqT_w size: " << accessor_dgdqT_w.size();
 
     // dataVecInForce is a vector of spatial forces for each body
     const OutDataVecDeriv *wrench_w = dataVecInForce[0];
     helper::ReadAccessor<OutDataVecDeriv> accessor_wrench_w(wrench_w);
     // size = nbodies
-    // msg_info() << "dataVecInForce accessor_wrench_w size = " << accessor_wrench_w.size();
+    msg_info() << "dataVecInForce accessor_wrench_w size = " << accessor_wrench_w.size();
     // assert(dgdq_w->getValue().size() == m_data->J.cols());
     // for(auto i = 0ul; i < accessor_wrench_w.size(); ++i)
     // {
     //   msg_info() << "in force[" << i << "]: " << accessor_wrench_w[i];
     // }
 
+    // TODO: use an eigen map to accessor_dgdqT_w ?
     Eigen::VectorXd jointsTorques = Eigen::VectorXd::Zero(m_model->nv);
     for (auto bodyIdx = 0ul; bodyIdx < m_model->nbodies; ++bodyIdx)
     {
       // bodyForce is a spatial force so 6-vector
       const Eigen::VectorXd bodyForce = sofa::rigidbodydynamics::vectorToEigen(accessor_wrench_w[bodyIdx], 6);
-      pinocchio::Data::Matrix6x J(6, m_model->nv);
+      pinocchio::Data::Matrix6x J = pinocchio::Data::Matrix6x::Zero(6, m_model->nv);
       const auto& frameIdx = m_bodyCoMFrames[bodyIdx];
+
       pinocchio::getFrameJacobian(*m_model, *m_data, frameIdx, pinocchio::LOCAL_WORLD_ALIGNED, J);
+      // msg_info() << "bodyIdx[" << bodyIdx << "]: J = \n" << J;
       // msg_info() << "bodyIdx[" << bodyIdx << "]: bodyForce = " << bodyForce;
-      // msg_info() << "bodyIdx[" << bodyIdx << "]: J^T = " << J.transpose();
-      Eigen::VectorXd jointTorques = Eigen::VectorXd::Zero(m_model->nv);
-      jointTorques = J.transpose() * bodyForce;
       // msg_info() << "bodyIdx[" << bodyIdx << "]: torque = " << jointTorques;
-      jointsTorques += jointTorques;
-      // jointsTorques += J.transpose() * bodyForce;
+      jointsTorques += J.transpose() * bodyForce;
     }
 
     for(auto i = 0ul; i < jointsTorques.size(); ++i)
     {
-      // msg_info() << "out tau[" << i << "] before: " << accessor_dgdqT_w[i];
       accessor_dgdqT_w[i][0] += jointsTorques[i];
-      // msg_info() << "out tau[" << i << "]: " << accessor_dgdqT_w[i];
     }
 
     // msg_info() << "********* END KinematicChainMapping applyJT";

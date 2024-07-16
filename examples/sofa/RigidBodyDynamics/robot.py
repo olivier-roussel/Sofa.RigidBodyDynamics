@@ -4,8 +4,11 @@ import numpy as np
 import pinocchio
 
 pinocchio_model_path = '/home/olrousse/devel/mambaforge/envs/sofa-pinocchio-dev/src/pinocchio/models/'
-#urdf_file = 'example-robot-data/robots/ur_description/urdf/ur10_robot.urdf'
-urdf_file = 'example-robot-data/robots/double_pendulum_description/urdf/double_pendulum_simple.urdf'
+urdf_file = 'example-robot-data/robots/ur_description/urdf/ur10_robot.urdf'
+# urdf_file = 'example-robot-data/robots/double_pendulum_description/urdf/double_pendulum_simple.urdf'
+# urdf_file = 'example-robot-data/robots/talos_data/robots/talos_full_v2.urdf'
+# urdf_file = 'example-robot-data/robots/solo_description/robots/solo.urdf'
+# urdf_file = 'example-robot-data/robots/tiago_description/robots/tiago_no_hand.urdf'
 
 urdf_full_filename = os.path.join(pinocchio_model_path, urdf_file)
 

@@ -31,7 +31,7 @@ set(README_FILES
     README.md
     )
 
-find_package(pinocchio REQUIRED)
+find_package(pinocchio 3.0 REQUIRED)
 
 add_library(${PROJECT_NAME} SHARED ${HEADER_FILES} ${SOURCE_FILES} ${README_FILES})
 

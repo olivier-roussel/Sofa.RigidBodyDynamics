@@ -101,6 +101,12 @@ namespace sofa::rigidbodydynamics
       msg_info() << "Robot nq = " << model->nq << " / nv = " << model->nv;
       msg_info() << "Robot njoints = " << model->njoints << " / nbodies = " << model->nbodies << " / nframes = " << model->nframes;
       msg_info() << "Robot model 6d gravity g = " << model->gravity;
+      msg_info() << "Robot inertias size = " << model->inertias.size();
+
+      for(auto idxJoint = 0u; idxJoint < model->njoints; ++idxJoint)
+      {
+        msg_info() << "Joint[" << idxJoint << "]: " << model->names[idxJoint] << " / " << model->joints[idxJoint];
+      }
 
       collisionModel = std::make_shared<pinocchio::GeometryModel>();
       pinocchio::urdf::buildGeom(*model, urdfFilename, pinocchio::COLLISION, *collisionModel, modelDir);
@@ -115,7 +121,7 @@ namespace sofa::rigidbodydynamics
       for (pinocchio::JointIndex bodyIdx = 0; bodyIdx < model->nbodies; ++bodyIdx)
       {
         const pinocchio::SE3 bodyCoM_i = pinocchio::SE3(Eigen::Matrix3d::Identity(), model->inertias[bodyIdx].lever());
-        const auto bodyFrameCoM = pinocchio::Frame{"Body_" + std::to_string(bodyIdx) + "_CoM", bodyIdx, bodyIdx, bodyCoM_i, pinocchio::FrameType::OP_FRAME};
+        const auto bodyFrameCoM = pinocchio::Frame{"Body_" + std::to_string(bodyIdx) + "_CoM", bodyIdx, bodyCoM_i, pinocchio::FrameType::OP_FRAME};
         bodyCoMFrames.push_back(model->addFrame(bodyFrameCoM));
       }
     }
@@ -225,7 +231,6 @@ namespace sofa::rigidbodydynamics
 
       const auto bodyMass = New<sofa::component::mass::UniformMass<Rigid3Types>>();
       bodyMass->setName("mass");
-      // bodyMass->setTotalMass(bodyInertia.mass());
       sofa::defaulttype::Rigid3dMass rigidMass;
       rigidMass.mass = bodyInertia.mass();
       rigidMass.inertiaMatrix = sofa::rigidbodydynamics::mat3ToSofaType(bodyInertia.inertia().matrix());
@@ -253,7 +258,7 @@ namespace sofa::rigidbodydynamics
           const auto &geom = visualModel->geometryObjects[geomIdx];
 
           const auto visualBodyNode = visualNode->createChild(geom.name);
-          msg_info() << "body[" << bodyIdx << "]:geom name: " << geom.name << " / parent joint: " << geom.parentJoint << " / object type: " << static_cast<int>(geom.fcl->getObjectType()) << " / node type: " << static_cast<int>(geom.fcl->getNodeType());
+          msg_info() << "body[" << bodyIdx << "]:geom name: " << geom.name << " / parent joint: " << geom.parentJoint << " / object type: " << static_cast<int>(geom.geometry->getObjectType()) << " / node type: " << static_cast<int>(geom.geometry->getNodeType());
 
           auto visualBodyMesh = sofa::rigidbodydynamics::fclGeometryToSofaTopology(geom.geometry, geom.placement, geom.meshScale);
           if (not visualBodyMesh)
