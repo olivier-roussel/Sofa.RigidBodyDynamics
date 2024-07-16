@@ -125,17 +125,6 @@ namespace sofa::component::mapping
       // no op
     }
 
-  public:
-    /**
-     *	Directory containing robot models
-     */
-    Data<std::string> d_modelDir;
-
-    /**
-     * URDF file absolute path
-     */
-    Data<std::string> d_urdfFile;
-
   private:
     std::shared_ptr<pinocchio::Model> m_model;
     // std::shared_ptr<pinocchio::GeometryModel> m_collisionModel;
@@ -144,8 +133,12 @@ namespace sofa::component::mapping
     // std::shared_ptr<pinocchio::GeometryData> m_collisionData;
     std::shared_ptr<pinocchio::GeometryData> m_visualData;
     std::vector<pinocchio::FrameIndex> m_bodyCoMFrames;
+    core::State<InRoot>* m_fromRootModel;
 
     using core::Multi2Mapping<TIn, TInRoot, TOut>::d_componentState;
+    Data<sofa::Index> d_indexFromRoot; ///< Corresponding index if the base of the articulated system is attached to input2. Default is last index.
+
+    void checkIndexFromRoot();
   };
 
 #if !defined(SOFA_COMPONENT_MAPPING_KINEMATICCHAINMAPPING_CPP)

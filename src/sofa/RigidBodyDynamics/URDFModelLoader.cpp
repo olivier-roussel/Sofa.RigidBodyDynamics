@@ -48,7 +48,9 @@ namespace sofa::rigidbodydynamics
 {
 
   URDFModelLoader::URDFModelLoader()
-      : d_urdfFilename(initData(&d_urdfFilename, "urdfFilename", "Filename of the URDF model")), d_modelDirectory(initData(&d_modelDirectory, "modelDirectory", "Directory containing robot models"))
+      : d_urdfFilename(initData(&d_urdfFilename, "urdfFilename", "Filename of the URDF model")), 
+      d_modelDirectory(initData(&d_modelDirectory, "modelDirectory", "Directory containing robot models")),
+      d_useFreeFlyerRootJoint(initData(&d_useFreeFlyerRootJoint, false, "useFreeFlyerRootJoint", "True if root joint is a Free Flyer joint, false if none"))
   {
     //     addUpdateCallback("updateURDFSources", {&d_urdfFilename, &d_modelDirectory}, [this](const core::DataTracker& )
     // {
@@ -77,6 +79,16 @@ namespace sofa::rigidbodydynamics
     return d_modelDirectory.getValue();
   }
 
+  void URDFModelLoader::setUseFreeFlyerRootJoint(bool useFreeFlyerRootJoint)
+  {
+    d_useFreeFlyerRootJoint.setValue(useFreeFlyerRootJoint);
+  }
+
+  bool URDFModelLoader::getUseFreeFlyerRootJoint()
+  {
+    return d_useFreeFlyerRootJoint.getValue();
+  }
+
   void URDFModelLoader::init()
   {
     this->reinit();
@@ -96,16 +108,24 @@ namespace sofa::rigidbodydynamics
     try
     {
       model = std::make_shared<pinocchio::Model>();
-      pinocchio::urdf::buildModel(urdfFilename, *model);
-      msg_info() << "Built robot model from URDF file: " << urdfFilename;
+      if(d_useFreeFlyerRootJoint.getValue())
+      {
+        pinocchio::urdf::buildModel(urdfFilename, pinocchio::JointModelFreeFlyer(), *model);
+        msg_info() << "Built robot model (with Free Flyer root joint) from URDF file: " << urdfFilename;
+      }
+      else
+      {
+        pinocchio::urdf::buildModel(urdfFilename, *model);
+        msg_info() << "Built robot model (with fixed root joint) from URDF file: " << urdfFilename;
+      }
       msg_info() << "Robot nq = " << model->nq << " / nv = " << model->nv;
       msg_info() << "Robot njoints = " << model->njoints << " / nbodies = " << model->nbodies << " / nframes = " << model->nframes;
       msg_info() << "Robot model 6d gravity g = " << model->gravity;
-      msg_info() << "Robot inertias size = " << model->inertias.size();
+      msg_info() << "Robot inertias vector size = " << model->inertias.size();
 
-      for(auto idxJoint = 0u; idxJoint < model->njoints; ++idxJoint)
+      for(auto jointIdx = 0u; jointIdx < model->njoints; ++jointIdx)
       {
-        msg_info() << "Joint[" << idxJoint << "]: " << model->names[idxJoint] << " / " << model->joints[idxJoint];
+        msg_info() << "Joint[" << jointIdx << "]: " << model->names[jointIdx] << " / " << model->joints[jointIdx];
       }
 
       // collisionModel = std::make_shared<pinocchio::GeometryModel>();
@@ -234,7 +254,7 @@ namespace sofa::rigidbodydynamics
       sofa::defaulttype::Rigid3dMass rigidMass;
       rigidMass.mass = bodyInertia.mass();
       rigidMass.inertiaMatrix = sofa::rigidbodydynamics::mat3ToSofaType(bodyInertia.inertia().matrix());
-      rigidMass.volume = 1.; // TODO: necessary ? from multiple geometries ? visual, collision ?
+      rigidMass.volume = 1.; // XXX: should not be used here as we only deal with rigid bodies, so we should be able to set any value
       rigidMass.recalc();
       bodyMass->setMass(rigidMass);
       bodyNode->addObject(bodyMass);

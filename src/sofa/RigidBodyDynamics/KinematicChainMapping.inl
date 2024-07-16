@@ -40,8 +40,16 @@ namespace sofa::component::mapping
 {
   template <class TIn, class TInRoot, class TOut>
   KinematicChainMapping<TIn, TInRoot, TOut>::KinematicChainMapping()
-      : d_modelDir(initData(&d_modelDir, std::string{}, "modelDir", "Directory containing robot models")), d_urdfFile(initData(&d_urdfFile, std::string{}, "urdfFile", "URDF file absolute path")), m_model{nullptr}, /*m_collisionModel{nullptr},*/ m_visualModel{nullptr}
+      /*, m_collisionModel{nullptr} */
+      : m_visualModel{nullptr}
+      , d_indexFromRoot(initData(&d_indexFromRoot, 0u, "indexInput2", "Corresponding index if the base of the articulated system is attached to input2. Default is last index."))
   {
+    this->addUpdateCallback("checkIndexFromRoot", {&d_indexFromRoot}, [this](const core::DataTracker& t)
+        {
+            SOFA_UNUSED(t);
+            checkIndexFromRoot();
+            return sofa::core::objectmodel::ComponentState::Valid;
+        }, {&d_componentState});
   }
 
   template <class TIn, class TInRoot, class TOut>
@@ -62,6 +70,13 @@ namespace sofa::component::mapping
       msg_error() << "While iniatilizing ; output Model not found.";
       d_componentState.setValue(sofa::core::objectmodel::ComponentState::Invalid);
       return;
+    }
+
+    if(not this->getFromModels2().empty())
+    {
+        m_fromRootModel = this->getFromModels2()[0];
+        msg_info() << "Root Model found : Name = " << m_fromRootModel->getName();
+        checkIndexFromRoot();
     }
 
     Inherit::init();
@@ -208,7 +223,7 @@ namespace sofa::component::mapping
       const auto& frameIdx = m_bodyCoMFrames[bodyIdx];
 
       pinocchio::getFrameJacobian(*m_model, *m_data, frameIdx, pinocchio::LOCAL_WORLD_ALIGNED, J);
-      // msg_info() << "bodyIdx[" << bodyIdx << "]: J = \n" << J;
+      msg_info() << "bodyIdx[" << bodyIdx << "]: J = \n" << J;
       // msg_info() << "bodyIdx[" << bodyIdx << "]: bodyForce = " << bodyForce;
       // msg_info() << "bodyIdx[" << bodyIdx << "]: torque = " << jointTorques;
       jointsTorques += J.transpose() * bodyForce;
@@ -313,4 +328,21 @@ namespace sofa::component::mapping
     return m_visualData;
   }
 
+  template <class TIn, class TInRoot, class TOut>
+  void KinematicChainMapping<TIn, TInRoot, TOut>::checkIndexFromRoot()
+  {
+      sofa::Size rootSize = m_fromRootModel->getSize();
+      if(d_indexFromRoot.isSet())
+      {
+          if(d_indexFromRoot.getValue() >= rootSize)
+          {
+              msg_warning() << d_indexFromRoot.getName() << ", " << d_indexFromRoot.getValue() << ", is larger than input2's size, " << rootSize
+                            << ". Using the default value instead which in this case will be "<< rootSize - 1;
+              d_indexFromRoot.setValue(rootSize - 1);
+          }
+      } else
+      {
+          d_indexFromRoot.setValue(rootSize - 1); // default is last index
+      }
+  }
 } // namespace sofa::component::mapping

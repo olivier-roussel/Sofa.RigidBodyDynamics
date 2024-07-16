@@ -42,12 +42,16 @@ namespace sofa::rigidbodydynamics
     void setModelDirectory(const std::string &d);
     const std::string &getModelDirectory() /*const*/;
 
+    void setUseFreeFlyerRootJoint(bool useFreeFlyerRootJoint);
+    bool getUseFreeFlyerRootJoint();
+
     void init() override;
 
     void reinit() override;
 
     DataFileName d_urdfFilename;
     Data<std::string> d_modelDirectory;
+    Data<bool> d_useFreeFlyerRootJoint;
 
   private:
     URDFModelLoader();
