@@ -12,6 +12,8 @@ urdf_file = 'example-robot-data/robots/solo_description/robots/solo.urdf'
 
 urdf_full_filename = os.path.join(pinocchio_model_path, urdf_file)
 
+useFFRootJoint=True
+
 if not os.path.isdir(pinocchio_model_path):
   sys.exit('Given model path does not exists')
 
@@ -25,13 +27,15 @@ class Robot:
         self.nq = 0
 
     def addRobot(self, name='Robot'):
-
         # Load the URDF model with pinocchio, only to get model num dofs for GUI elements
         # Actual URDF loading is done through the URDFModelLoader component added to the scene 
         # in the following lines
+        # TODO move this in the URDFModelLoader (which would create the q0 data)
         model = pinocchio.buildModelFromUrdf(urdf_full_filename)
+
         self.nq = model.nq
 
+        print('Model nq (without root joint)=', model.nq)
         # reference config
         self.q0 = np.zeros(self.nq)
 
@@ -42,7 +46,7 @@ class Robot:
         robotNode.addObject('CGLinearSolver', name='Solver', iterations=200)
         # robotNode.addObject('SparseLDLSolver', template="CompressedRowSparseMatrixMat3x3d")
         # robotNode.addObject('GenericConstraintCorrection')
-        robotNode.addObject('URDFModelLoader', name='URDFModelLoader', urdfFilename=urdf_full_filename, modelDirectory=pinocchio_model_path, useFreeFlyerRootJoint = False, printLog=True)
+        robotNode.addObject('URDFModelLoader', name='URDFModelLoader', urdfFilename=urdf_full_filename, modelDirectory=pinocchio_model_path, useFreeFlyerRootJoint=useFFRootJoint, printLog=True)
 
         return robotNode
 

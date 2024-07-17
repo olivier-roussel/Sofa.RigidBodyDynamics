@@ -98,6 +98,8 @@ namespace sofa::rigidbodydynamics
   {
     const std::string &urdfFilename = d_urdfFilename.getValue();
     const std::string &modelDir = d_modelDirectory.getValue();
+    const bool useFreeFlyerRootJoint = d_useFreeFlyerRootJoint.getValue();
+
     msg_info() << " Loading robot from URDF file: " << urdfFilename;
     msg_info() << "Model directory: " << modelDir;
     std::shared_ptr<pinocchio::Model> model;
@@ -105,10 +107,35 @@ namespace sofa::rigidbodydynamics
     std::shared_ptr<pinocchio::GeometryModel> visualModel;
     std::vector<pinocchio::FrameIndex> bodyCoMFrames;
 
+    simulation::Node *context = dynamic_cast<simulation::Node *>(this->getContext()); // access to current node
+
+    // clear robot scene tree
+    {
+      const auto jointsNode = context->getChild("Joints");
+      if (jointsNode)
+      {
+        context->removeChild(jointsNode);
+        msg_info() << "Joints node was already present in robot scene tree. Removing it...";
+      }
+      const auto rootJointNode = context->getChild("RootJoint");
+      if (rootJointNode)
+      {
+        context->removeChild(rootJointNode);
+        msg_info() << "RootJoint node was already present in robot scene tree. Removing it...";
+      }
+      const auto bodiesNode = context->getChild("Bodies");
+      if (bodiesNode)
+      {
+        context->removeChild(bodiesNode);
+        msg_info() << "Bodies node was already present in robot scene tree. Removing it...";
+      }
+    }
+
+    // load URDF model
     try
     {
       model = std::make_shared<pinocchio::Model>();
-      if(d_useFreeFlyerRootJoint.getValue())
+      if(useFreeFlyerRootJoint)
       {
         pinocchio::urdf::buildModel(urdfFilename, pinocchio::JointModelFreeFlyer(), *model);
         msg_info() << "Built robot model (with Free Flyer root joint) from URDF file: " << urdfFilename;
@@ -153,25 +180,13 @@ namespace sofa::rigidbodydynamics
     }
 
     // create robot scene tree
-    simulation::Node *context = dynamic_cast<simulation::Node *>(this->getContext()); // access to current node
-    {
-      auto jointsNode = context->getChild("Joints");
-      if (jointsNode)
-      {
-        context->removeChild(jointsNode);
-        msg_info() << "Joints node was already present in robot scene tree. Removing it...";
-      }
-      auto bodiesNode = context->getChild("Bodies");
-      if (bodiesNode)
-      {
-        context->removeChild(bodiesNode);
-        msg_info() << "Bodies node was already present in robot scene tree. Removing it...";
-      }
-    }
     const auto jointsNode = context->createChild("Joints");
+
     const auto jointsDofs = New<MechanicalObjectVec1>();
     jointsDofs->setName("dofs");
-    jointsDofs->resize(model->nq);
+    auto nqWithoutRootJoint = useFreeFlyerRootJoint ? model->nq - 7 : model->nq;
+    msg_info() << "nqWithoutRootJoint = " << nqWithoutRootJoint;
+    jointsDofs->resize(nqWithoutRootJoint);
     // set desired position specified from \"q0\" data field
     auto robotJointsData = context->findData("q0");
     if (not robotJointsData)
@@ -190,7 +205,7 @@ namespace sofa::rigidbodydynamics
     std::vector<double> springVal = {1e3};
     restShapeForceField->d_stiffness.setValue(springVal);
     sofa::type::vector<sofa::Index> pointsIndexes;
-    for (sofa::Index idx = 0ul; idx < model->nq; ++idx)
+    for (sofa::Index idx = 0ul; idx < nqWithoutRootJoint; ++idx)
     {
       pointsIndexes.push_back(idx);
     }
@@ -209,7 +224,7 @@ namespace sofa::rigidbodydynamics
     kinematicChainMapping->setVisualModel(visualModel);
     // set mapping input1
     kinematicChainMapping->addInputModel1(jointsDofs.get());
-    // TODO set mapping input2 (free flyer base dof if any)
+
 
     // one dof container for all bodies version
     const auto bodiesDof = New<MechanicalObjectRigid3>();
@@ -219,6 +234,31 @@ namespace sofa::rigidbodydynamics
 
     kinematicChainMapping->addOutputModel(bodiesDof.get());
     bodiesNode->addObject(kinematicChainMapping);
+
+    // set mapping input2: free flyer root joint if any specified
+    if(useFreeFlyerRootJoint)
+    {
+      const auto rootJointNode = context->createChild("RootJoint");
+
+      const auto rootJointDof = New<MechanicalObjectRigid3>();
+      rootJointDof->setName("Free-Flyer");
+      rootJointDof->resize(1);
+      rootJointNode->addObject(rootJointDof);
+      
+      // const auto restShapeForceField2 = New<sofa::component::solidmechanics::spring::RestShapeSpringsForceField<Rigid3Types>>();
+      // restShapeForceField2->setName("root joint spring force field");
+      // std::vector<double> springVal2 = {1e3};
+      // restShapeForceField2->d_stiffness.setValue(springVal2);
+      // sofa::type::vector<sofa::Index> pointsIndexes2 = {0};
+      // restShapeForceField2->d_points.setValue(pointsIndexes2);
+      // rootJointNode->addObject(restShapeForceField2);
+
+      // Bodies node have two parents: rootJointNode and jointsNode
+      rootJointNode->addChild(bodiesNode);
+
+      // set mapping input2
+      kinematicChainMapping->addInputModel2(rootJointDof.get());
+    }
 
     // // XXX spring on robot bodies to test applyJT
     // const auto restShapeForceField2 = New<sofa::component::solidmechanics::spring::RestShapeSpringsForceField<Rigid3Types>>();
