@@ -111,17 +111,17 @@ namespace sofa::component::mapping
     // assert(m_collisionModel);
     assert(m_visualModel);
 
-    msg_info() << "========= KinematicChainMapping apply";
-    msg_info() << "dataVecInPos.size() = " << dataVecInPos.size();
-    msg_info() << "dataVecInRootPos.size() = " << dataVecInRootPos.size();
-    msg_info() << "dataVecOutPos.size() = " << dataVecOutPos.size();
+    // msg_info() << "========= KinematicChainMapping apply";
+    // msg_info() << "dataVecInPos.size() = " << dataVecInPos.size();
+    // msg_info() << "dataVecInRootPos.size() = " << dataVecInRootPos.size();
+    // msg_info() << "dataVecOutPos.size() = " << dataVecOutPos.size();
 
     if (d_componentState.getValue() == sofa::core::objectmodel::ComponentState::Invalid)
       return;
 
     // map in configuration to pinocchio
     InVecCoord in_dofs = dataVecInPos[0]->getValue();
-    msg_info() << "in_dofs size: " << in_dofs.size() << " / model nq = " << m_model->nq;
+    // msg_info() << "in_dofs size: " << in_dofs.size() << " / model nq = " << m_model->nq;
     // assert(in_dofs.size() == m_model->nq);
 
 
@@ -129,7 +129,7 @@ namespace sofa::component::mapping
     if (m_fromRootModel and not dataVecInRootPos.empty())
     {
       InRootVecCoord inRootVec_w = dataVecInRootPos[0]->getValue();
-      msg_info() << "inRootVec_w.size() = " << inRootVec_w.size();
+      // msg_info() << "inRootVec_w.size() = " << inRootVec_w.size();
 
       const sofa::defaulttype::RigidCoord<3, double>& rootPose_w = inRootVec_w[d_indexFromRoot.getValue()];
       q.head<7>() = sofa::rigidbodydynamics::se3ToEigen(rootPose_w);
@@ -140,7 +140,7 @@ namespace sofa::component::mapping
       q = sofa::rigidbodydynamics::vectorVec1ToEigen(in_dofs, m_model->nq);
     }
 
-    msg_info() << "q = " << q;
+    // msg_info() << "q = " << q;
 
 
     // Computes joints Jacobians and forward kinematics. Jacobians will
@@ -181,14 +181,14 @@ namespace sofa::component::mapping
     // map in configuration to pinocchio
     InVecDeriv in_dofs = dataVecInVel[0]->getValue();
 
-    msg_info() << "in_dofs size: " << in_dofs.size() << " / model nv = " << m_model->nv;
+    // msg_info() << "in_dofs size: " << in_dofs.size() << " / model nv = " << m_model->nv;
     // assert(in_dofs.size() == m_model->nv);
 
     Eigen::VectorXd dq = Eigen::VectorXd::Zero(m_model->nv);
     if (m_fromRootModel and not dataVecInRootVel.empty())
     {
       InRootVecDeriv inRootVelVec_w = dataVecInRootVel[0]->getValue();
-      msg_info() << "inRootVelVec_w.size() = " << inRootVelVec_w.size();
+      // msg_info() << "inRootVelVec_w.size() = " << inRootVelVec_w.size();
 
       const sofa::defaulttype::RigidDeriv<3, double>& rootVel_w = inRootVelVec_w[d_indexFromRoot.getValue()];
       dq.head<6>() = sofa::rigidbodydynamics::spatialVelocityToEigen(rootVel_w);
@@ -199,7 +199,7 @@ namespace sofa::component::mapping
       dq = sofa::rigidbodydynamics::vectorVec1ToEigen(in_dofs, m_model->nv);
     }
 
-    msg_info() << "dq = " << dq;
+    // msg_info() << "dq = " << dq;
 
     // Single output vector of size njoints
     OutDataVecDeriv *dgdq_w = dataVecOutVel[0];
@@ -225,28 +225,27 @@ namespace sofa::component::mapping
   {
     if (d_componentState.getValue() == sofa::core::objectmodel::ComponentState::Invalid)
       return;
-
     // maps spatial forces applied on each body to torques on joints
 
     // msg_info() << "********* KinematicChainMapping applyJT";
 
     // Single output vector of size njoints
-    msg_info() << "dataVecOut1Force = " << dataVecOut1Force.size();
-    msg_info() << "dataVecOut2Force = " << dataVecOut2Force.size();
-    msg_info() << "dataVecInForce = " << dataVecInForce.size();
+    // msg_info() << "dataVecOut1Force = " << dataVecOut1Force.size();
+    // msg_info() << "dataVecOut2Force = " << dataVecOut2Force.size();
+    // msg_info() << "dataVecInForce = " << dataVecInForce.size();
 
     // dataVecOut1Force will be the resulting torque on each joint
     InDataVecDeriv *outTorques = dataVecOut1Force[0];
     helper::WriteAccessor<InDataVecDeriv> wa_outTorques(outTorques);
-    // size = nv
-    msg_info() << "dataVecOut1Force outTorques size: " << wa_outTorques.size();
+    // size = nv if no root joint, nv+6 if using free-flyer root joint
+    // msg_info() << "dataVecOut1Force outTorques size: " << wa_outTorques.size();
 
     // dataVecInForce is a vector of spatial forces for each body
     const OutDataVecDeriv *wrench_w = dataVecInForce[0];
     helper::ReadAccessor<OutDataVecDeriv> ra_wrench_w(wrench_w);
     // size = nbodies
-    msg_info() << "dataVecInForce wrench_w size = " << ra_wrench_w.size();
-    msg_info() << "input bodies forces: ra_wrench_w = " << ra_wrench_w;
+    // msg_info() << "dataVecInForce wrench_w size = " << ra_wrench_w.size() << ",should match nbodies = " << m_model->nbodies;
+    // msg_info() << "input bodies forces: ra_wrench_w = " << ra_wrench_w;
     // assert(dgdq_w->getValue().size() == m_data->J.cols());
     // for(auto i = 0ul; i < ra_wrench_w.size(); ++i)
     // {
@@ -263,9 +262,6 @@ namespace sofa::component::mapping
       const auto& frameIdx = m_bodyCoMFrames[bodyIdx];
 
       pinocchio::getFrameJacobian(*m_model, *m_data, frameIdx, pinocchio::LOCAL_WORLD_ALIGNED, J);
-      msg_info() << "bodyIdx[" << bodyIdx << "]: J = \n" << J;
-      // msg_info() << "bodyIdx[" << bodyIdx << "]: bodyForce = " << bodyForce;
-      // msg_info() << "bodyIdx[" << bodyIdx << "]: torque = " << jointTorques;
       jointsTorques += J.transpose() * bodyForce;
     }
 
@@ -274,10 +270,10 @@ namespace sofa::component::mapping
       // joint torques contains first 6 parameters for the root joint, and nv-6 parameters for other joints
       InRootDataVecDeriv *rootWrench_w = dataVecOut2Force[0];
       helper::WriteAccessor<InRootDataVecDeriv> wa_rootWrench_w(rootWrench_w);
-      for(auto i = 0ul; i < 6; ++i)
-      {
-        wa_rootWrench_w[i][0] += jointsTorques[i];
-      }
+      // msg_info() << "wa_rootWrench_w size = " << wa_rootWrench_w.size();
+      // write (add) root joint spatial force
+      wa_rootWrench_w[0] += sofa::rigidbodydynamics::vec6ToSofaType(jointsTorques.head<6>());
+      // write (add) joint torques
       for(auto i = 0ul; i < jointsTorques.size() - 6; ++i)
       {
         wa_outTorques[i][0] += jointsTorques[i+6];
@@ -285,7 +281,7 @@ namespace sofa::component::mapping
     }
     else
     {
-      // no root joints case
+      // no root joints case, only write (add) joint torques
       for(auto i = 0ul; i < jointsTorques.size(); ++i)
       {
         wa_outTorques[i][0] += jointsTorques[i];
