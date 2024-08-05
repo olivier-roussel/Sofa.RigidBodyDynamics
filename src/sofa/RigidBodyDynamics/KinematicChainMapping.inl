@@ -111,7 +111,7 @@ namespace sofa::component::mapping
     // assert(m_collisionModel);
     assert(m_visualModel);
 
-    msg_info() << "========= KinematicChainMapping apply";
+    // msg_info() << "========= KinematicChainMapping apply";
     // msg_info() << "dataVecInPos.size() = " << dataVecInPos.size();
     // msg_info() << "dataVecInRootPos.size() = " << dataVecInRootPos.size();
     // msg_info() << "dataVecOutPos.size() = " << dataVecOutPos.size();
@@ -174,7 +174,7 @@ namespace sofa::component::mapping
       const type::vector<const InDataVecDeriv *> &dataVecInVel,
       const type::vector<const InRootDataVecDeriv *> &dataVecInRootVel)
   {
-    msg_info() << "********* KinematicChainMapping applyJ";
+    // msg_info() << "********* KinematicChainMapping applyJ";
     if (d_componentState.getValue() == sofa::core::objectmodel::ComponentState::Invalid)
       return;
 
@@ -227,7 +227,7 @@ namespace sofa::component::mapping
       return;
     // maps spatial forces applied on each body to torques on joints
 
-    msg_info() << "********* KinematicChainMapping applyJT";
+    // msg_info() << "********* KinematicChainMapping applyJT";
 
     // Single output vector of size njoints
     // msg_info() << "dataVecOut1Force = " << dataVecOut1Force.size();
@@ -299,40 +299,27 @@ namespace sofa::component::mapping
     if (d_componentState.getValue() == sofa::core::objectmodel::ComponentState::Invalid)
       return;
 
-    msg_info() << "********* KinematicChainMapping applyJT On MatrixDeriv";
-    msg_info() << "dataVecOut1Force = " << dataMatOut1Const.size();
-    msg_info() << "dataVecOut2Force = " << dataMatOut2Const.size();
-    msg_info() << "dataVecInForce = " << dataMatInConst.size();
+    // msg_info() << "********* KinematicChainMapping applyJT On MatrixDeriv";
+    // msg_info() << "dataVecOut1Force = " << dataMatOut1Const.size();
+    // msg_info() << "dataVecOut2Force = " << dataMatOut2Const.size();
+    // msg_info() << "dataVecInForce = " << dataMatInConst.size();
 
     // dataVecOut1Force will be the resulting torque on each joint
     InDataMatrixDeriv *outTorques = dataMatOut1Const[0];
     helper::WriteAccessor<InDataMatrixDeriv> outTorquesWa(outTorques);
-    // msg_info() << "dataMatOut1Const outTorquesWa CRS matrix rowBSize = " << outTorquesWa->rowBSize();
-    // msg_info() << "dataMatOut1Const outTorquesWa CRS matrix colBSize = " << outTorquesWa->colBSize();
-    msg_info() << "dataMatOut1Const outTorques CRS matrix typeid: " << typeid(outTorques).name();
-    // msg_info() << "dataMatOut1Const outTorquesWa CRS matrix typeid: " << typeid(outTorquesWa).name();
-    msg_info() << "dataMatOut1Const  OutDeriv typeid: " << typeid(OutDeriv).name();
-
-    // msg_info() << "dataMatOut1Const outTorquesWa CRS constraint empty ? " << outTorquesWa->empty();
+    // msg_info() << "dataMatOut1Const outTorques CRS matrix typeid: " << typeid(outTorques).name();
+    // msg_info() << "dataMatOut1Const  OutDeriv typeid: " << typeid(OutDeriv).name();
 
     // dataMatInConst 
     const OutDataMatrixDeriv *inWrench = dataMatInConst[0];
     helper::ReadAccessor<OutDataMatrixDeriv> inWrenchRa(inWrench);
-    msg_info() << "dataMatInConst inWrenchRa CRS matrix rowBSize = " << inWrenchRa->rowBSize();
-    msg_info() << "dataMatInConst inWrenchRa CRS matrix colBSize = " << inWrenchRa->colBSize();
-    msg_info() << "dataMatInConst inWrenchRa CRS matrix = " << inWrenchRa;
-    msg_info() << "dataMatInConst inWrench CRS matrix typeid: " << typeid(inWrench).name();
-    msg_info() << "dataMatOut1Const InDeriv typeid: " << typeid(InDeriv).name();
-    // msg_info() << "dataMatInConst inWrenchRa CRS matrix typeid: " << typeid(inWrenchRa).name();
-    
-    msg_info() << "dataMatOut1Const inWrenchRa CRS constraint empty ? " << inWrenchRa->empty();
+    // msg_info() << "dataMatInConst inWrenchRa CRS matrix rowBSize = " << inWrenchRa->rowBSize();
+    // msg_info() << "dataMatInConst inWrenchRa CRS matrix colBSize = " << inWrenchRa->colBSize();
+    // msg_info() << "dataMatInConst inWrenchRa CRS matrix = " << inWrenchRa;
+    // msg_info() << "dataMatInConst inWrench CRS matrix typeid: " << typeid(inWrench).name();
+    // msg_info() << "dataMatOut1Const InDeriv typeid: " << typeid(InDeriv).name();
+    // msg_info() << "dataMatOut1Const inWrenchRa CRS constraint empty ? " << inWrenchRa->empty();
 
-    // if (m_fromRootModel and not dataMatOut2Const.empty())
-    // {
-      // msg_warning() << "********* KinematicChainMapping applyJT On MatrixDeriv: case with root joint not implemented ";
-    // }
-    // else
-    // {
       // row = constraint
     for (typename Out::MatrixDeriv::RowConstIterator rowIt = inWrenchRa->begin(); rowIt != inWrenchRa->end(); ++rowIt)
     {
@@ -381,33 +368,31 @@ namespace sofa::component::mapping
     }
 
 
-    if (m_fromRootModel and not dataMatOut2Const.empty())
-    {
-      msg_info() << "outRootWrench CRS matrix:";
-      InRootDataMatrixDeriv *outRootWrench = dataMatOut2Const[0];
-      helper::WriteAccessor<InRootDataMatrixDeriv> outRootWrenchWa(outRootWrench);
-      for (auto rowIt = outRootWrenchWa->begin(); rowIt != outRootWrenchWa->end(); ++rowIt)
-      {
-        for (auto colIt = rowIt.begin(); colIt != rowIt.end(); ++colIt)
-        {
-          msg_info() << "row[" << rowIt.index() << "], col[" << colIt.index() << "]:" << colIt.val();
-        }
-      }
-    }
-
-    msg_info() << "outTorques CRS matrix:";
-    for (auto rowIt = outTorquesWa->begin(); rowIt != outTorquesWa->end(); ++rowIt)
-    {
-      for (auto colIt = rowIt.begin(); colIt != rowIt.end(); ++colIt)
-      {
-        msg_info() << "row[" << rowIt.index() << "], col[" << colIt.index() << "]:" << colIt.val();
-      }
-    }
-
+    // print output matrices
+    // if (m_fromRootModel and not dataMatOut2Const.empty())
+    // {
+    //   msg_info() << "outRootWrench CRS matrix:";
+    //   InRootDataMatrixDeriv *outRootWrench = dataMatOut2Const[0];
+    //   helper::WriteAccessor<InRootDataMatrixDeriv> outRootWrenchWa(outRootWrench);
+    //   for (auto rowIt = outRootWrenchWa->begin(); rowIt != outRootWrenchWa->end(); ++rowIt)
+    //   {
+    //     for (auto colIt = rowIt.begin(); colIt != rowIt.end(); ++colIt)
+    //     {
+    //       msg_info() << "row[" << rowIt.index() << "], col[" << colIt.index() << "]:" << colIt.val();
+    //     }
+    //   }
+    // }
+    // msg_info() << "outTorques CRS matrix:";
+    // for (auto rowIt = outTorquesWa->begin(); rowIt != outTorquesWa->end(); ++rowIt)
+    // {
+    //   for (auto colIt = rowIt.begin(); colIt != rowIt.end(); ++colIt)
+    //   {
+    //     msg_info() << "row[" << rowIt.index() << "], col[" << colIt.index() << "]:" << colIt.val();
+    //   }
     // }
 
 
-    msg_info() << "********* END KinematicChainMapping applyJT On MatrixDeriv";
+    // msg_info() << "********* END KinematicChainMapping applyJT On MatrixDeriv";
   }
 
   template <class TIn, class TInRoot, class TOut>
