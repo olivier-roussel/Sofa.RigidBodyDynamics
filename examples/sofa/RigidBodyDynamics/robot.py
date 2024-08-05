@@ -43,9 +43,9 @@ class Robot:
         robotNode = self.node.addChild(name)
         robotNode.addData('q0', self.q0, None, 'angle of articulations in radian', '', 'vector<float>')
         robotNode.addObject('EulerImplicitSolver')
-        robotNode.addObject('CGLinearSolver', name='Solver', iterations=200)
-        # robotNode.addObject('SparseLDLSolver', template="CompressedRowSparseMatrixMat3x3d")
-        # robotNode.addObject('GenericConstraintCorrection')
+        #robotNode.addObject('CGLinearSolver', name='Solver', iterations=200)
+        robotNode.addObject('SparseLDLSolver', template="CompressedRowSparseMatrixMat3x3d")
+        robotNode.addObject('GenericConstraintCorrection')
         robotNode.addObject('URDFModelLoader', name='URDFModelLoader', urdfFilename=urdf_full_filename, modelDirectory=pinocchio_model_path, useFreeFlyerRootJoint=useFFRootJoint, printLog=True)
 
         return robotNode

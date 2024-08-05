@@ -15,11 +15,11 @@ def addHeader(rootNode):
     rootNode.addObject('RequiredPlugin', name='Sofa.Component.LinearSolver.Iterative') # Needed to use components [CGLinearSolver]
 
     rootNode.addObject('VisualStyle', displayFlags='showVisualModels hideBehaviorModels hideForceFields hideWireframe')
-    rootNode.addObject('RequiredPlugin', name='SofaPlugins', pluginName=['Sofa.RigidBodyDynamics_d', 'SofaPython3'])
+    rootNode.addObject('RequiredPlugin', name='SofaPlugins', pluginName=['Sofa.RigidBodyDynamics', 'SofaPython3'])
 
     rootNode.addObject('DefaultVisualManagerLoop')
-    # rootNode.addObject('FreeMotionAnimationLoop')
-    rootNode.addObject('DefaultAnimationLoop')
+    rootNode.addObject('FreeMotionAnimationLoop')
+    # rootNode.addObject('DefaultAnimationLoop')
     rootNode.addObject('GenericConstraintSolver', maxIterations=50, tolerance=1e-5, printLog=False)
     rootNode.addObject('BackgroundSetting', color=[1., 1., 1., 1.])
     rootNode.findData('dt').value=0.01

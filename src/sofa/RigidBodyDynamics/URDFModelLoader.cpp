@@ -30,7 +30,15 @@
 #include <sofa/component/mass/UniformMass.h>
 #include <sofa/component/statecontainer/MechanicalObject.h>
 #include <sofa/component/solidmechanics/spring/RestShapeSpringsForceField.h>
-// #include <sofa/component/topology/container/constant/MeshTopology.h>
+// #include <sofa/component/mechanicalload/ConstantForceField.h>
+
+// for testing constraints
+#include <sofa/component/constraint/lagrangian/model/BilateralLagrangianConstraint.h>
+#include <sofa/component/constraint/lagrangian/solver/GenericConstraintSolver.h>
+#include <sofa/component/linearsolver/direct/SparseLDLSolver.h>
+#include <sofa/component/odesolver/backward/EulerImplicitSolver.h>
+#include <sofa/component/constraint/lagrangian/correction/GenericConstraintCorrection.h>
+
 #include <sofa/defaulttype/RigidTypes.h>
 #include <sofa/gl/component/rendering3d/OglModel.h>
 #include <sofa/simulation/Node.h>
@@ -245,13 +253,14 @@ namespace sofa::rigidbodydynamics
       rootJointDof->resize(1);
       rootJointNode->addObject(rootJointDof);
       
-      // const auto restShapeForceField2 = New<sofa::component::solidmechanics::spring::RestShapeSpringsForceField<Rigid3Types>>();
-      // restShapeForceField2->setName("root joint spring force field");
-      // std::vector<double> springVal2 = {1e3};
-      // restShapeForceField2->d_stiffness.setValue(springVal2);
-      // sofa::type::vector<sofa::Index> pointsIndexes2 = {0};
-      // restShapeForceField2->d_points.setValue(pointsIndexes2);
-      // rootJointNode->addObject(restShapeForceField2);
+      const auto restShapeForceField2 = New<sofa::component::solidmechanics::spring::RestShapeSpringsForceField<Rigid3Types>>();
+      restShapeForceField2->setName("root joint spring force field");
+      std::vector<double> springVal2 = {1e6};
+      restShapeForceField2->d_stiffness.setValue(springVal2);
+      restShapeForceField2->d_angularStiffness.setValue(springVal);
+      sofa::type::vector<sofa::Index> pointsIndexes2 = {0};
+      restShapeForceField2->d_points.setValue(pointsIndexes2);
+      rootJointNode->addObject(restShapeForceField2);
 
       // Bodies node have two parents: rootJointNode and jointsNode
       rootJointNode->addChild(bodiesNode);
@@ -266,15 +275,97 @@ namespace sofa::rigidbodydynamics
     // std::vector<double> springVal2 = {1e8};
     // restShapeForceField2->d_stiffness.setValue(springVal2);
     // sofa::type::vector<sofa::Index> pointsIndexes2;
-    // for (sofa::Index idx = 0ul; idx < model->nq; ++idx)
+    // for (sofa::Index idx = 0ul; idx < model->nbodies; ++idx)
     // {
     //   pointsIndexes2.push_back(idx);
     // }
     // restShapeForceField2->d_points.setValue(pointsIndexes2);
     // bodiesNode->addObject(restShapeForceField2);
 
-    // TODO
-    // const auto restShapeForceField2 = New<sofa::component::solidmechanics::ConstantForceField<Rigid3Types>>();
+    // XXX Constant force field on each body DoF (Rigid3) to test constraints (?)
+    // const auto constantForceField = New<sofa::component::mechanicalload::ConstantForceField<Rigid3Types>>();
+    // constantForceField->setName("Constant FF on t.x");
+    // Rigid3Types::Deriv force(sofa::type::Vec<3, double>(1e3, 0., 0.), sofa::type::Vec<3, double>(0., 0., 0.));
+    // for (sofa::Index idx = 0ul; idx < model->nbodies; ++idx)
+    // {
+    //   constantForceField->setForce(idx, force);
+    // }
+    // bodiesNode->addObject(constantForceField);
+
+
+    // Testing constraints (applytJT with consrtaint matrices)
+    simulation::Node *rootNode = dynamic_cast<simulation::Node *>(this->getContext()->getRootContext()); // access to root node
+    const auto dummyNode = rootNode->createChild("dummyNode");
+
+
+    const auto constraintSolver = New<sofa::component::linearsolver::direct::SparseLDLSolver< sofa::linearalgebra::CompressedRowSparseMatrix< sofa::type::Mat<3,3,SReal> >,sofa::linearalgebra::FullVector<SReal> >>();
+    constraintSolver->setName("SparseLDLSolver_constraint");
+    dummyNode->addObject(constraintSolver);
+
+    const auto implicitSolver = New<sofa::component::odesolver::backward::EulerImplicitSolver>();
+    implicitSolver->setName("EulerImplicitSolver_constraint");
+    dummyNode->addObject(implicitSolver);
+
+    const auto genericConstraintCorrection = New<sofa::component::constraint::lagrangian::correction::GenericConstraintCorrection>();
+    genericConstraintCorrection->setName("GenericConstraintCorrection_constraint");
+    dummyNode->addObject(genericConstraintCorrection);
+
+    const auto mecDummyObject = New<sofa::component::statecontainer::MechanicalObject<Vec3Types>>();
+    mecDummyObject->setName("mecDummyObject");
+    mecDummyObject->setTranslation(-0.19, -0.137099, -0.262249);
+    dummyNode->addObject(mecDummyObject);
+
+    const auto restShapeForceFieldDummy = New<sofa::component::solidmechanics::spring::RestShapeSpringsForceField<Vec3Types>>();
+    restShapeForceFieldDummy->setName("restShapeForceField_constraint");
+    restShapeForceFieldDummy->d_points.setValue(std::vector<sofa::Index>{0});
+    restShapeForceFieldDummy->d_stiffness.setValue(std::vector<double>{1e3});
+    dummyNode->addObject(restShapeForceFieldDummy);
+
+    const auto bodyMassDummy = New<sofa::component::mass::UniformMass<Vec3Types>>();
+    bodyMassDummy->setName("mass_constraint");
+    bodyMassDummy->setTotalMass(1.e-1);
+    dummyNode->addObject(bodyMassDummy);
+
+    // REPRISE: tester contraintes avec le rootJoint
+
+    auto rootGenericConstraintSolverObj = rootNode->getObject("GenericConstraintSolver");
+    if(rootGenericConstraintSolverObj)
+    {
+      const auto rootGenericConstraintSolver = dynamic_cast<sofa::component::constraint::lagrangian::solver::GenericConstraintSolver *>(rootGenericConstraintSolverObj);
+      if(rootGenericConstraintSolver)
+      {
+        msg_info() << "Successfully found back object GenericConstraintSolver";
+        rootGenericConstraintSolver->init();
+        // rootGenericConstraintSolver->l_constraintCorrections.add(genericConstraintCorrection);
+        // genericConstraintCorrection->addConstraintSolver(rootGenericConstraintSolver);
+      }
+      else
+      {
+        msg_error() << "Failed to cast object GenericConstraintSolver";
+      }
+    }
+    else
+    {
+      msg_error() << "Failed to find object GenericConstraintSolver";
+    }
+
+    // ------ dummyNode
+
+    const auto constraintNode = bodiesNode->createChild("Constraints");
+    const auto mecObject = New<sofa::component::statecontainer::MechanicalObject<Vec3Types>>();
+    mecObject->setName("mecObject");
+    mecObject->setTranslation(0., 0., 0.);
+    constraintNode->addObject(mecObject);
+
+    const auto constraint = New<sofa::component::constraint::lagrangian::model::BilateralLagrangianConstraint<Vec3Types>>(mecObject.get(), mecDummyObject.get());
+    constraint->addIndexes(0, 0);
+    constraint->setName("constraint");
+    constraintNode->addObject(constraint);
+
+    const auto constraintMapping = New<sofa::component::mapping::nonlinear::RigidMapping<Rigid3Types, Vec3Types>>();
+    constraintMapping->setModels(bodiesDof.get(), mecObject.get());
+    constraintMapping->d_index = model->nbodies -1;
+    constraintNode->addObject(constraintMapping);
 
 
     for (pinocchio::JointIndex bodyIdx = 0; bodyIdx < model->nbodies; ++bodyIdx)
@@ -349,6 +440,8 @@ namespace sofa::rigidbodydynamics
         }
       }
     }
+
+
 
     msg_info() << "Model has " << model->referenceConfigurations.size() << " reference configurations registered";
   }
