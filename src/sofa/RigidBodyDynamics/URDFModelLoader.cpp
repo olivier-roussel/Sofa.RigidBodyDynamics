@@ -210,8 +210,7 @@ namespace sofa::rigidbodydynamics
     // spring to control robot dofs to desired dofs set by rest position (x0)
     const auto restShapeForceField = New<sofa::component::solidmechanics::spring::RestShapeSpringsForceField<Vec1Types>>();
     restShapeForceField->setName("RestShapeSpringsForceField");
-    std::vector<double> springVal = {1e3};
-    restShapeForceField->d_stiffness.setValue(springVal);
+    restShapeForceField->d_stiffness.setValue({1.e3});
     sofa::type::vector<sofa::Index> pointsIndexes;
     for (sofa::Index idx = 0ul; idx < nqWithoutRootJoint; ++idx)
     {
@@ -253,14 +252,12 @@ namespace sofa::rigidbodydynamics
       rootJointDof->resize(1);
       rootJointNode->addObject(rootJointDof);
       
-      const auto restShapeForceField2 = New<sofa::component::solidmechanics::spring::RestShapeSpringsForceField<Rigid3Types>>();
-      restShapeForceField2->setName("root joint spring force field");
-      std::vector<double> springVal2 = {1e6};
-      restShapeForceField2->d_stiffness.setValue(springVal2);
-      restShapeForceField2->d_angularStiffness.setValue(springVal);
-      sofa::type::vector<sofa::Index> pointsIndexes2 = {0};
-      restShapeForceField2->d_points.setValue(pointsIndexes2);
-      rootJointNode->addObject(restShapeForceField2);
+      const auto rootRestShapeForceField = New<sofa::component::solidmechanics::spring::RestShapeSpringsForceField<Rigid3Types>>();
+      rootRestShapeForceField->setName("root joint spring force field");
+      rootRestShapeForceField->d_stiffness.setValue({1.e3});
+      rootRestShapeForceField->d_angularStiffness.setValue({1.e3});
+      rootRestShapeForceField->d_points.setValue({0});
+      rootJointNode->addObject(rootRestShapeForceField);
 
       // Bodies node have two parents: rootJointNode and jointsNode
       rootJointNode->addChild(bodiesNode);
@@ -269,34 +266,9 @@ namespace sofa::rigidbodydynamics
       kinematicChainMapping->addInputModel2(rootJointDof.get());
     }
 
-    // // XXX spring on robot bodies to test applyJT
-    // const auto restShapeForceField2 = New<sofa::component::solidmechanics::spring::RestShapeSpringsForceField<Rigid3Types>>();
-    // restShapeForceField2->setName("bodies_RestShapeSpringsForceField");
-    // std::vector<double> springVal2 = {1e8};
-    // restShapeForceField2->d_stiffness.setValue(springVal2);
-    // sofa::type::vector<sofa::Index> pointsIndexes2;
-    // for (sofa::Index idx = 0ul; idx < model->nbodies; ++idx)
-    // {
-    //   pointsIndexes2.push_back(idx);
-    // }
-    // restShapeForceField2->d_points.setValue(pointsIndexes2);
-    // bodiesNode->addObject(restShapeForceField2);
-
-    // XXX Constant force field on each body DoF (Rigid3) to test constraints (?)
-    // const auto constantForceField = New<sofa::component::mechanicalload::ConstantForceField<Rigid3Types>>();
-    // constantForceField->setName("Constant FF on t.x");
-    // Rigid3Types::Deriv force(sofa::type::Vec<3, double>(1e3, 0., 0.), sofa::type::Vec<3, double>(0., 0., 0.));
-    // for (sofa::Index idx = 0ul; idx < model->nbodies; ++idx)
-    // {
-    //   constantForceField->setForce(idx, force);
-    // }
-    // bodiesNode->addObject(constantForceField);
-
-
-    // Testing constraints (applytJT with consrtaint matrices)
+    // Testing constraints (applytJT with constraint matrices)
     simulation::Node *rootNode = dynamic_cast<simulation::Node *>(this->getContext()->getRootContext()); // access to root node
     const auto dummyNode = rootNode->createChild("dummyNode");
-
 
     const auto constraintSolver = New<sofa::component::linearsolver::direct::SparseLDLSolver< sofa::linearalgebra::CompressedRowSparseMatrix< sofa::type::Mat<3,3,SReal> >,sofa::linearalgebra::FullVector<SReal> >>();
     constraintSolver->setName("SparseLDLSolver_constraint");
@@ -317,13 +289,13 @@ namespace sofa::rigidbodydynamics
 
     const auto restShapeForceFieldDummy = New<sofa::component::solidmechanics::spring::RestShapeSpringsForceField<Vec3Types>>();
     restShapeForceFieldDummy->setName("restShapeForceField_constraint");
-    restShapeForceFieldDummy->d_points.setValue(std::vector<sofa::Index>{0});
-    restShapeForceFieldDummy->d_stiffness.setValue(std::vector<double>{1e3});
+    restShapeForceFieldDummy->d_points.setValue({0});
+    restShapeForceFieldDummy->d_stiffness.setValue({1.e3});
     dummyNode->addObject(restShapeForceFieldDummy);
 
     const auto bodyMassDummy = New<sofa::component::mass::UniformMass<Vec3Types>>();
     bodyMassDummy->setName("mass_constraint");
-    bodyMassDummy->setTotalMass(1.e-1);
+    bodyMassDummy->setTotalMass(1.);
     dummyNode->addObject(bodyMassDummy);
 
     // REPRISE: tester contraintes avec le rootJoint
@@ -364,7 +336,7 @@ namespace sofa::rigidbodydynamics
 
     const auto constraintMapping = New<sofa::component::mapping::nonlinear::RigidMapping<Rigid3Types, Vec3Types>>();
     constraintMapping->setModels(bodiesDof.get(), mecObject.get());
-    constraintMapping->d_index = model->nbodies -1;
+    constraintMapping->d_index = model->nbodies -1; // apply on last body
     constraintNode->addObject(constraintMapping);
 
 
@@ -421,7 +393,7 @@ namespace sofa::rigidbodydynamics
           }
           visualBodyNode->addObject(visualBodyMesh);
 
-          // add visual openGL model (should be linked automatically to the topology)
+          // add visual openGL model
           auto visualBodyModel = New<sofa::gl::component::rendering3d::OglModel>();
           visualBodyModel->setName("visualModel");
           visualBodyModel->l_topology = visualBodyMesh;
