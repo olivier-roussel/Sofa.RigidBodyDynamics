@@ -330,7 +330,8 @@ namespace sofa::rigidbodydynamics
     constraintNode->addObject(mecObject);
 
     const auto constraint = New<sofa::component::constraint::lagrangian::model::BilateralLagrangianConstraint<Vec3Types>>(mecObject.get(), mecDummyObject.get());
-    constraint->addIndexes(0, 0);
+    const auto nullPoint = Vec3Types::Coord(0., 0., 0.);
+    constraint->addContact(Vec3Types::Deriv(), nullPoint, nullPoint, 0., 0, 0, nullPoint, nullPoint, 0l, sofa::component::constraint::lagrangian::model::BilateralLagrangianConstraint<Vec3Types>::BilateralLagrangianConstraint::PersistentID());
     constraint->setName("constraint");
     constraintNode->addObject(constraint);
 
