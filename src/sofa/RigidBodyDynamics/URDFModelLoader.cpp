@@ -58,7 +58,8 @@ namespace sofa::rigidbodydynamics
   URDFModelLoader::URDFModelLoader()
       : d_urdfFilename(initData(&d_urdfFilename, "urdfFilename", "Filename of the URDF model")), 
       d_modelDirectory(initData(&d_modelDirectory, "modelDirectory", "Directory containing robot models")),
-      d_useFreeFlyerRootJoint(initData(&d_useFreeFlyerRootJoint, false, "useFreeFlyerRootJoint", "True if root joint is a Free Flyer joint, false if none"))
+      d_useFreeFlyerRootJoint(initData(&d_useFreeFlyerRootJoint, false, "useFreeFlyerRootJoint", "True if root joint is a Free Flyer joint, false if none")),
+      d_q0(initData(&d_q0, "q0", "Default configuration values of robot DoFs"))
   {
     //     addUpdateCallback("updateURDFSources", {&d_urdfFilename, &d_modelDirectory}, [this](const core::DataTracker& )
     // {
@@ -196,15 +197,12 @@ namespace sofa::rigidbodydynamics
     msg_info() << "nqWithoutRootJoint = " << nqWithoutRootJoint;
     jointsDofs->resize(nqWithoutRootJoint);
     // set desired position specified from \"q0\" data field
-    auto robotJointsData = context->findData("q0");
-    if (not robotJointsData)
-    {
-      msg_error() << "joints data \"q0\" not found ";
-      d_componentState.setValue(sofa::core::objectmodel::ComponentState::Invalid);
-      return;
-    }
-    jointsDofs->x0.setParent(robotJointsData);
-
+    sofa::type::Vec1d defaultDofValue;
+    defaultDofValue.set(0.);
+    sofa::type::vector<sofa::type::Vec1d> q0Values(nqWithoutRootJoint, defaultDofValue);
+    // TODO retrieve default configs q0 from URDF if any
+    d_q0.setValue(q0Values);
+    jointsDofs->x0.setParent(&d_q0);
     jointsNode->addObject(jointsDofs);
 
     // spring to control robot dofs to desired dofs set by rest position (x0)
@@ -298,8 +296,6 @@ namespace sofa::rigidbodydynamics
     bodyMassDummy->setTotalMass(1.);
     dummyNode->addObject(bodyMassDummy);
 
-    // REPRISE: tester contraintes avec le rootJoint
-
     auto rootGenericConstraintSolverObj = rootNode->getObject("GenericConstraintSolver");
     if(rootGenericConstraintSolverObj)
     {
@@ -382,7 +378,11 @@ namespace sofa::rigidbodydynamics
           const auto &geom = visualModel->geometryObjects[geomIdx];
 
           const auto visualBodyNode = visualNode->createChild(geom.name);
-          msg_info() << "body[" << bodyIdx << "]:geom name: " << geom.name << " / parent joint: " << geom.parentJoint << " / object type: " << static_cast<int>(geom.geometry->getObjectType()) << " / node type: " << static_cast<int>(geom.geometry->getNodeType());
+          // msg_info() << "body[" << bodyIdx << "]:geom name: " << geom.name << " / parent joint: " << geom.parentJoint << " / object type: " << static_cast<int>(geom.geometry->getObjectType()) << " / node type: " << static_cast<int>(geom.geometry->getNodeType());
+          // msg_info() << "overrideMaterial: " << geom.overrideMaterial << " / mesh color: " << geom.meshColor;
+          // msg_info() << "meshPath: " << geom.meshPath;
+          // msg_info() << "meshTexturePath: " << geom.meshTexturePath;
+          // msg_info() << "meshMaterial: " << typeid(geom.meshMaterial).name();
 
           auto visualBodyMesh = sofa::rigidbodydynamics::fclGeometryToSofaTopology(geom.geometry, geom.placement, geom.meshScale);
           if (not visualBodyMesh)

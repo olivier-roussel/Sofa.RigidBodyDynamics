@@ -52,6 +52,7 @@ namespace sofa::rigidbodydynamics
     DataFileName d_urdfFilename;
     Data<std::string> d_modelDirectory;
     Data<bool> d_useFreeFlyerRootJoint;
+    Data<sofa::type::vector<sofa::type::Vec1d>> d_q0;
 
   private:
     URDFModelLoader();
