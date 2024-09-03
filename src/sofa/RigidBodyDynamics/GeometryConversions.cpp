@@ -108,8 +108,9 @@ namespace sofa::rigidbodydynamics
         // reconstruct mesh
         for (auto vertIdx = 0ul; vertIdx < bvhGeom->num_vertices; ++vertIdx)
         {
-          const pinocchio::SE3::Vector3 fclVert = tf.act(bvhGeom->vertices[vertIdx]).cwiseProduct(scale);
+          const pinocchio::SE3::Vector3 fclVert = tf.act(bvhGeom->vertices[vertIdx]).cwiseProduct(scale.cwiseAbs());
           meshTopology->addPoint(fclVert[0], fclVert[1], fclVert[2]);
+
         }
         for (auto triIdx = 0ul; triIdx < bvhGeom->num_tris; ++triIdx)
         {
