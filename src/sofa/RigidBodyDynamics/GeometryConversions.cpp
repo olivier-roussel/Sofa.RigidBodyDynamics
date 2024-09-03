@@ -59,7 +59,7 @@ namespace
       boxPts.emplace_back(+boxGeom->halfSide[0], +boxGeom->halfSide[1], +boxGeom->halfSide[2]); // 7
 
       // apply transfrom and set to mesh data
-      for(const auto pt: boxPts)
+      for(const auto& pt: boxPts)
       {
         const auto ptTf = tf.act(pt).cwiseProduct(scale);
         meshTopology->addPoint(ptTf[0], ptTf[1], ptTf[2]);
