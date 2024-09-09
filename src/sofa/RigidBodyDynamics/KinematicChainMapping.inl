@@ -36,13 +36,11 @@
 
 using namespace sofa::defaulttype;
 
-namespace sofa::component::mapping
+namespace sofa::component::mapping::nonlinear
 {
   template <class TIn, class TInRoot, class TOut>
   KinematicChainMapping<TIn, TInRoot, TOut>::KinematicChainMapping()
-      /*, m_collisionModel{nullptr} */
-      : m_visualModel{nullptr}
-      , d_indexFromRoot(initData(&d_indexFromRoot, 0u, "indexInput2", "Corresponding index if the base of the articulated system is attached to input2. Default is last index."))
+      : d_indexFromRoot(initData(&d_indexFromRoot, 0u, "indexInput2", "Corresponding index if the base of the articulated system is attached to input2. Default is last index."))
   {
     this->addUpdateCallback("checkIndexFromRoot", {&d_indexFromRoot}, [this](const core::DataTracker& t)
         {
@@ -98,9 +96,9 @@ namespace sofa::component::mapping
 
   template <class TIn, class TInRoot, class TOut>
   void KinematicChainMapping<TIn, TInRoot, TOut>::apply(
-      const core::MechanicalParams *mparams, const type::vector<OutDataVecCoord *> &dataVecOutPos,
-      const type::vector<const InDataVecCoord *> &dataVecInPos,
-      const type::vector<const InRootDataVecCoord *> &dataVecInRootPos)
+      const core::MechanicalParams *mparams, const type::vector<DataVecCoord_t<Out> *> &dataVecOutPos,
+      const type::vector<const DataVecCoord_t<In> *> &dataVecInPos,
+      const type::vector<const DataVecCoord_t<InRoot> *> &dataVecInRootPos)
   {
     SOFA_UNUSED(mparams);
 
@@ -108,8 +106,6 @@ namespace sofa::component::mapping
     assert(dataVecInRootPos.size() <= 1); // one or zero free floating root dof
 
     assert(m_model);
-    // assert(m_collisionModel);
-    assert(m_visualModel);
 
     // msg_info() << "========= KinematicChainMapping apply";
     // msg_info() << "dataVecInPos.size() = " << dataVecInPos.size();
@@ -120,7 +116,7 @@ namespace sofa::component::mapping
       return;
 
     // map in configuration to pinocchio
-    InVecCoord in_dofs = dataVecInPos[0]->getValue();
+    VecCoord_t<In> in_dofs = dataVecInPos[0]->getValue();
     // msg_info() << "in_dofs size: " << in_dofs.size() << " / model nq = " << m_model->nq;
     // assert(in_dofs.size() == m_model->nq);
 
@@ -128,7 +124,7 @@ namespace sofa::component::mapping
     Eigen::VectorXd q = Eigen::VectorXd::Zero(m_model->nq);
     if (m_fromRootModel and not dataVecInRootPos.empty())
     {
-      InRootVecCoord inRootVec_w = dataVecInRootPos[0]->getValue();
+      VecCoord_t<InRoot> inRootVec_w = dataVecInRootPos[0]->getValue();
       // msg_info() << "inRootVec_w.size() = " << inRootVec_w.size();
 
       const sofa::defaulttype::RigidCoord<3, double>& rootPose_w = inRootVec_w[d_indexFromRoot.getValue()];
@@ -149,18 +145,13 @@ namespace sofa::component::mapping
     pinocchio::computeJointJacobians(*m_model, *m_data, q);
     // msg_info() << " fwd kinematics & joint jacobians computed";
 
-    // Update Geometry models
-    // pinocchio::updateGeometryPlacements(*m_model, *m_data, *m_collisionModel, *m_collisionData);
-    pinocchio::updateGeometryPlacements(*m_model, *m_data, *m_visualModel, *m_visualData);
-    // msg_info() << " geometry placements updated";
-
     pinocchio::updateFramePlacements(*m_model, *m_data);
     // msg_info() << " frames placements updated";
 
     // Single output vector of size njoints
-    OutDataVecCoord *g_w = dataVecOutPos[0];
+    DataVecCoord_t<Out> *g_w = dataVecOutPos[0];
 
-    helper::WriteAccessor<OutDataVecCoord> accessor_g_w(g_w);
+    helper::WriteAccessor<DataVecCoord_t<Out>> accessor_g_w(g_w);
     for (auto bodyIdx = 0ul; bodyIdx < m_model->nbodies; ++bodyIdx)
     {
       const auto& frameIdx = m_bodyCoMFrames[bodyIdx];
@@ -170,16 +161,16 @@ namespace sofa::component::mapping
 
   template <class TIn, class TInRoot, class TOut>
   void KinematicChainMapping<TIn, TInRoot, TOut>::applyJ(
-      const core::MechanicalParams *mparams, const type::vector<OutDataVecDeriv *> &dataVecOutVel,
-      const type::vector<const InDataVecDeriv *> &dataVecInVel,
-      const type::vector<const InRootDataVecDeriv *> &dataVecInRootVel)
+      const core::MechanicalParams *mparams, const type::vector<DataVecDeriv_t<Out> *> &dataVecOutVel,
+      const type::vector<const DataVecDeriv_t<In> *> &dataVecInVel,
+      const type::vector<const DataVecDeriv_t<InRoot> *> &dataVecInRootVel)
   {
     // msg_info() << "********* KinematicChainMapping applyJ";
     if (d_componentState.getValue() == sofa::core::objectmodel::ComponentState::Invalid)
       return;
 
     // map in configuration to pinocchio
-    InVecDeriv in_dofs = dataVecInVel[0]->getValue();
+    VecDeriv_t<In> in_dofs = dataVecInVel[0]->getValue();
 
     // msg_info() << "in_dofs size: " << in_dofs.size() << " / model nv = " << m_model->nv;
     // assert(in_dofs.size() == m_model->nv);
@@ -187,7 +178,7 @@ namespace sofa::component::mapping
     Eigen::VectorXd dq = Eigen::VectorXd::Zero(m_model->nv);
     if (m_fromRootModel and not dataVecInRootVel.empty())
     {
-      InRootVecDeriv inRootVelVec_w = dataVecInRootVel[0]->getValue();
+      VecDeriv_t<InRoot> inRootVelVec_w = dataVecInRootVel[0]->getValue();
       // msg_info() << "inRootVelVec_w.size() = " << inRootVelVec_w.size();
 
       const sofa::defaulttype::RigidDeriv<3, double>& rootVel_w = inRootVelVec_w[d_indexFromRoot.getValue()];
@@ -202,11 +193,11 @@ namespace sofa::component::mapping
     // msg_info() << "dq = " << dq;
 
     // Single output vector of size njoints
-    OutDataVecDeriv *dgdq_w = dataVecOutVel[0];
+    DataVecDeriv_t<Out> *dgdq_w = dataVecOutVel[0];
 
     assert(dgdq_w->getValue().size() == m_model->njoints);
 
-    helper::WriteAccessor<OutDataVecDeriv> accessor_dgdq_w(dgdq_w);
+    helper::WriteAccessor<DataVecDeriv_t<Out>> accessor_dgdq_w(dgdq_w);
     for (auto bodyIdx = 0ul; bodyIdx < m_model->nbodies; ++bodyIdx)
     {
       pinocchio::Data::Matrix6x J = pinocchio::Data::Matrix6x::Zero(6, m_model->nv);
@@ -219,9 +210,9 @@ namespace sofa::component::mapping
 
   template <class TIn, class TInRoot, class TOut>
   void KinematicChainMapping<TIn, TInRoot, TOut>::applyJT(
-      const core::MechanicalParams *mparams, const type::vector<InDataVecDeriv *> &dataVecOut1Force,
-      const type::vector<InRootDataVecDeriv *> &dataVecOut2Force,
-      const type::vector<const OutDataVecDeriv *> &dataVecInForce)
+      const core::MechanicalParams *mparams, const type::vector<DataVecDeriv_t<In> *> &dataVecOut1Force,
+      const type::vector<DataVecDeriv_t<InRoot> *> &dataVecOut2Force,
+      const type::vector<const DataVecDeriv_t<Out> *> &dataVecInForce)
   {
     if (d_componentState.getValue() == sofa::core::objectmodel::ComponentState::Invalid)
       return;
@@ -235,14 +226,14 @@ namespace sofa::component::mapping
     // msg_info() << "dataVecInForce = " << dataVecInForce.size();
 
     // dataVecOut1Force will be the resulting torque on each joint
-    InDataVecDeriv *outTorques = dataVecOut1Force[0];
-    helper::WriteAccessor<InDataVecDeriv> outTorquesWa(outTorques);
+    DataVecDeriv_t<In> *outTorques = dataVecOut1Force[0];
+    helper::WriteAccessor<DataVecDeriv_t<In>> outTorquesWa(outTorques);
     // size = nv if no root joint, nv+6 if using free-flyer root joint
     // msg_info() << "dataVecOut1Force outTorques size: " << wa_outTorques.size();
 
     // dataVecInForce is a vector of spatial forces for each body
-    const OutDataVecDeriv *inWrench = dataVecInForce[0];
-    helper::ReadAccessor<OutDataVecDeriv> inWrenchRa(inWrench);
+    const DataVecDeriv_t<Out> *inWrench = dataVecInForce[0];
+    helper::ReadAccessor<DataVecDeriv_t<Out>> inWrenchRa(inWrench);
     // size = nbodies
     // msg_info() << "dataVecInForce wrench_w size = " << ra_wrench_w.size() << ",should match nbodies = " << m_model->nbodies;
     // msg_info() << "input bodies forces: ra_wrench_w = " << ra_wrench_w;
@@ -268,8 +259,8 @@ namespace sofa::component::mapping
     if (m_fromRootModel and not dataVecOut2Force.empty())
     {
       // joint torques contains first 6 parameters for the root joint, and nv-6 parameters for other joints
-      InRootDataVecDeriv *outRootWrench = dataVecOut2Force[0];
-      helper::WriteAccessor<InRootDataVecDeriv> outRootWrenchWa(outRootWrench);
+      DataVecDeriv_t<InRoot> *outRootWrench = dataVecOut2Force[0];
+      helper::WriteAccessor<DataVecDeriv_t<InRoot>> outRootWrenchWa(outRootWrench);
       // msg_info() << "wa_rootWrench_w size = " << wa_rootWrench_w.size();
       // write (add) root joint spatial force
       outRootWrenchWa[0] += sofa::rigidbodydynamics::vec6ToSofaType(jointsTorques.head<6>());
@@ -292,9 +283,9 @@ namespace sofa::component::mapping
 
   template <class TIn, class TInRoot, class TOut>
   void KinematicChainMapping<TIn, TInRoot, TOut>::applyJT(
-      const core::ConstraintParams * cparams, const type::vector<InDataMatrixDeriv *> & dataMatOut1Const,
-      const type::vector<InRootDataMatrixDeriv *> & dataMatOut2Const,
-      const type::vector<const OutDataMatrixDeriv *> & dataMatInConst)
+      const core::ConstraintParams * cparams, const type::vector<DataMatrixDeriv_t<In> *> & dataMatOut1Const,
+      const type::vector<DataMatrixDeriv_t<InRoot> *> & dataMatOut2Const,
+      const type::vector<const DataMatrixDeriv_t<Out> *> & dataMatInConst)
   {
     if (d_componentState.getValue() == sofa::core::objectmodel::ComponentState::Invalid)
       return;
@@ -305,14 +296,14 @@ namespace sofa::component::mapping
     // msg_info() << "dataVecInForce = " << dataMatInConst.size();
 
     // dataVecOut1Force will be the resulting torque on each joint
-    InDataMatrixDeriv *outTorques = dataMatOut1Const[0];
-    helper::WriteAccessor<InDataMatrixDeriv> outTorquesWa(outTorques);
+    DataMatrixDeriv_t<In> *outTorques = dataMatOut1Const[0];
+    helper::WriteAccessor<DataMatrixDeriv_t<In>> outTorquesWa(outTorques);
     // msg_info() << "dataMatOut1Const outTorques CRS matrix typeid: " << typeid(outTorques).name();
     // msg_info() << "dataMatOut1Const  OutDeriv typeid: " << typeid(OutDeriv).name();
 
     // dataMatInConst 
-    const OutDataMatrixDeriv *inWrench = dataMatInConst[0];
-    helper::ReadAccessor<OutDataMatrixDeriv> inWrenchRa(inWrench);
+    const DataMatrixDeriv_t<Out> *inWrench = dataMatInConst[0];
+    helper::ReadAccessor<DataMatrixDeriv_t<Out>> inWrenchRa(inWrench);
     // msg_info() << "dataMatInConst inWrenchRa CRS matrix rowBSize = " << inWrenchRa->rowBSize();
     // msg_info() << "dataMatInConst inWrenchRa CRS matrix colBSize = " << inWrenchRa->colBSize();
     // msg_info() << "dataMatInConst inWrenchRa CRS matrix = " << inWrenchRa;
@@ -321,11 +312,11 @@ namespace sofa::component::mapping
     // msg_info() << "dataMatOut1Const inWrenchRa CRS constraint empty ? " << inWrenchRa->empty();
 
       // row = constraint
-    for (typename Out::MatrixDeriv::RowConstIterator rowIt = inWrenchRa->begin(); rowIt != inWrenchRa->end(); ++rowIt)
+    for (auto rowIt = inWrenchRa->begin(); rowIt != inWrenchRa->end(); ++rowIt)
     {
       Eigen::VectorXd jointsTorques = Eigen::VectorXd::Zero(m_model->nv);
       // col = dof (bodies)
-      for (typename Out::MatrixDeriv::ColConstIterator colIt = rowIt.begin(); colIt != rowIt.end(); ++colIt)
+      for (auto colIt = rowIt.begin(); colIt != rowIt.end(); ++colIt)
       {
         // retrieve body frame index (centered at CoM) for each body
         const auto bodyIdx = colIt.index();
@@ -342,27 +333,27 @@ namespace sofa::component::mapping
       if (m_fromRootModel and not dataMatOut2Const.empty())
       {
         // write (add) root joint spatial force
-        InRootDataMatrixDeriv *outRootWrench = dataMatOut2Const[0];
-        helper::WriteAccessor<InRootDataMatrixDeriv> outRootWrenchWa(outRootWrench);
-        typename InRootMatrixDeriv::RowIterator oRoot = outRootWrenchWa->writeLine(rowIt.index());
-        const InRootDeriv rootWrench(sofa::rigidbodydynamics::vec6ToSofaType(jointsTorques.head<6>()));
+        DataMatrixDeriv_t<InRoot> *outRootWrench = dataMatOut2Const[0];
+        helper::WriteAccessor<DataMatrixDeriv_t<InRoot>> outRootWrenchWa(outRootWrench);
+        auto oRoot = outRootWrenchWa->writeLine(rowIt.index());
+        const Deriv_t<InRoot> rootWrench(sofa::rigidbodydynamics::vec6ToSofaType(jointsTorques.head<6>()));
         oRoot.addCol(0, rootWrench);
         // write summed joint torques for this constraint to output
-        typename InMatrixDeriv::RowIterator o = outTorquesWa->writeLine(rowIt.index());
+        auto outRowIt = outTorquesWa->writeLine(rowIt.index());
         for(auto i = 0ul; i < jointsTorques.size() - 6; ++i)
         {
-          const InDeriv torque(jointsTorques[i+6]); // InDeriv is Vec1 type
-          o.addCol(i, torque);
+          const Deriv_t<In> torque(jointsTorques[i+6]); // InDeriv is Vec1 type
+          outRowIt.addCol(i, torque);
         }
       }
       else
       {
         // write summed joint torques for this constraint to output
-        typename InMatrixDeriv::RowIterator o = outTorquesWa->writeLine(rowIt.index());
+        auto outRowIt = outTorquesWa->writeLine(rowIt.index());
         for(auto i = 0ul; i < jointsTorques.size(); ++i)
         {
-          const InDeriv torque(jointsTorques[i]); // InDeriv is Vec1 type
-          o.addCol(i, torque);
+          const Deriv_t<In> torque(jointsTorques[i]); // InDeriv is Vec1 type
+          outRowIt.addCol(i, torque);
         }
       }
     }
@@ -412,41 +403,11 @@ namespace sofa::component::mapping
     m_data = std::make_shared<pinocchio::Data>(*m_model);
   }
 
-  // template <class TIn, class TInRoot, class TOut>
-  // void KinematicChainMapping<TIn, TInRoot, TOut>::setCollisionModel(const std::shared_ptr<pinocchio::GeometryModel> &collisionModel)
-  // {
-  //   assert(collisionModel);
-  //   m_collisionModel = collisionModel;
-  //   // build collision data
-  //   m_collisionData = std::make_shared<pinocchio::GeometryData>(*m_collisionModel);
-  // }
-
-  template <class TIn, class TInRoot, class TOut>
-  void KinematicChainMapping<TIn, TInRoot, TOut>::setVisualModel(const std::shared_ptr<pinocchio::GeometryModel> &visualModel)
-  {
-    assert(visualModel);
-    m_visualModel = visualModel;
-    // build visual data
-    m_visualData = std::make_shared<pinocchio::GeometryData>(*m_visualModel);
-  }
-
   template <class TIn, class TInRoot, class TOut>
   void KinematicChainMapping<TIn, TInRoot, TOut>::setBodyCoMFrames(const std::vector<pinocchio::FrameIndex>& bodyCoMFrames)
   {
     assert(bodyCoMFrames);
     m_bodyCoMFrames = bodyCoMFrames;
-  }
-
-  // template <class TIn, class TInRoot, class TOut>
-  // const std::shared_ptr<pinocchio::GeometryData> &KinematicChainMapping<TIn, TInRoot, TOut>::collisionData() const
-  // {
-  //   return m_collisionData;
-  // }
-
-  template <class TIn, class TInRoot, class TOut>
-  const std::shared_ptr<pinocchio::GeometryData> &KinematicChainMapping<TIn, TInRoot, TOut>::visualData() const
-  {
-    return m_visualData;
   }
 
   template <class TIn, class TInRoot, class TOut>
@@ -466,4 +427,4 @@ namespace sofa::component::mapping
           d_indexFromRoot.setValue(rootSize - 1); // default is last index
       }
   }
-} // namespace sofa::component::mapping
+} // namespace sofa::component::mapping::nonlinear

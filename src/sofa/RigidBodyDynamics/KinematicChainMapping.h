@@ -30,9 +30,8 @@
 #include <sofa/simulation/Node.h>
 
 #include <pinocchio/multibody/model.hpp>
-#include <pinocchio/multibody/geometry.hpp>
 
-namespace sofa::component::mapping
+namespace sofa::component::mapping::nonlinear
 {
 
   template <class TIn, class TInRoot, class TOut>
@@ -47,52 +46,25 @@ namespace sofa::component::mapping
     typedef TInRoot InRoot;
     typedef TOut Out;
 
-    typedef typename In::Coord InCoord;
-    typedef typename In::Deriv InDeriv;
-    typedef typename In::VecCoord InVecCoord;
-    typedef typename In::VecDeriv InVecDeriv;
-
-    typedef typename InRoot::Coord InRootCoord;
-    typedef typename InRoot::Deriv InRootDeriv;
-    typedef typename InRoot::VecCoord InRootVecCoord;
-    typedef typename InRoot::VecDeriv InRootVecDeriv;
-
-    typedef typename Out::Coord OutCoord;
-    typedef typename Out::Deriv OutDeriv;
-    typedef typename Out::VecCoord OutVecCoord;
-    typedef typename Out::VecDeriv OutVecDeriv;
-
-    typedef typename In::MatrixDeriv InMatrixDeriv;
-    typedef Data<InVecCoord> InDataVecCoord;
-    typedef Data<InVecDeriv> InDataVecDeriv;
-    typedef Data<InMatrixDeriv> InDataMatrixDeriv;
-
-    typedef typename InRoot::MatrixDeriv InRootMatrixDeriv;
-    typedef Data<InRootVecCoord> InRootDataVecCoord;
-    typedef Data<InRootVecDeriv> InRootDataVecDeriv;
-    typedef Data<InRootMatrixDeriv> InRootDataMatrixDeriv;
-
-    typedef typename Out::MatrixDeriv OutMatrixDeriv;
-    typedef Data<OutVecCoord> OutDataVecCoord;
-    typedef Data<OutVecDeriv> OutDataVecDeriv;
-    typedef Data<OutMatrixDeriv> OutDataMatrixDeriv;
+    // void apply(const core::MechanicalParams* mparams, DataVecCoord_t<Out>& out, const DataVecCoord_t<In>& in) override;
 
     void apply(
-        const core::MechanicalParams *mparams, const type::vector<OutDataVecCoord *> &dataVecOutPos,
-        const type::vector<const InDataVecCoord *> &dataVecIn1Pos,
-        const type::vector<const InRootDataVecCoord *> &dataVecIn2Pos) override;
+        const core::MechanicalParams *mparams, const type::vector<DataVecCoord_t<Out> *> &dataVecOutPos,
+        const type::vector<const DataVecCoord_t<In> *> &dataVecIn1Pos,
+        const type::vector<const DataVecCoord_t<InRoot> *> &dataVecIn2Pos) override;
+
     void applyJ(
-        const core::MechanicalParams *mparams, const type::vector<OutDataVecDeriv *> &dataVecOutVel,
-        const type::vector<const InDataVecDeriv *> &dataVecIn1Vel,
-        const type::vector<const InRootDataVecDeriv *> &dataVecIn2Vel) override;
+        const core::MechanicalParams *mparams, const type::vector<DataVecDeriv_t<Out> *> &dataVecOutVel,
+        const type::vector<const DataVecDeriv_t<In> *> &dataVecIn1Vel,
+        const type::vector<const DataVecDeriv_t<InRoot> *> &dataVecIn2Vel) override;
     void applyJT(
-        const core::MechanicalParams *mparams, const type::vector<InDataVecDeriv *> &dataVecOut1Force,
-        const type::vector<InRootDataVecDeriv *> &dataVecOut2Force,
-        const type::vector<const OutDataVecDeriv *> &dataVecInForce) override;
+        const core::MechanicalParams *mparams, const type::vector<DataVecDeriv_t<In> *> &dataVecOut1Force,
+        const type::vector<DataVecDeriv_t<InRoot> *> &dataVecOut2Force,
+        const type::vector<const DataVecDeriv_t<Out> *> &dataVecInForce) override;
     void applyJT(
-        const core::ConstraintParams * /*cparams*/, const type::vector<InDataMatrixDeriv *> & /* dataMatOut1Const */,
-        const type::vector<InRootDataMatrixDeriv *> & /*dataMatOut2Const*/,
-        const type::vector<const OutDataMatrixDeriv *> & /*dataMatInConst*/) override;
+        const core::ConstraintParams * /*cparams*/, const type::vector<DataMatrixDeriv_t<In> *> & /* dataMatOut1Const */,
+        const type::vector<DataMatrixDeriv_t<InRoot> *> & /*dataMatOut2Const*/,
+        const type::vector<const DataMatrixDeriv_t<Out> *> & /*dataMatInConst*/) override;
 
     void applyDJT(const core::MechanicalParams * /*mparams*/, core::MultiVecDerivId /*inForce*/, core::ConstMultiVecDerivId /*outForce*/) override
     {
@@ -108,15 +80,7 @@ namespace sofa::component::mapping
 
     void setModel(const std::shared_ptr<pinocchio::Model> &model);
 
-    // void setCollisionModel(const std::shared_ptr<pinocchio::GeometryModel> &collisionModel);
-
-    void setVisualModel(const std::shared_ptr<pinocchio::GeometryModel> &visualModel);
-
     void setBodyCoMFrames(const std::vector<pinocchio::FrameIndex>& bodyCoMFrames);
-
-    // const std::shared_ptr<pinocchio::GeometryData>& collisionData() const;
-
-    const std::shared_ptr<pinocchio::GeometryData>& visualData() const;
 
   protected:
     KinematicChainMapping();
@@ -127,11 +91,7 @@ namespace sofa::component::mapping
 
   private:
     std::shared_ptr<pinocchio::Model> m_model;
-    // std::shared_ptr<pinocchio::GeometryModel> m_collisionModel;
-    std::shared_ptr<pinocchio::GeometryModel> m_visualModel;
     std::shared_ptr<pinocchio::Data> m_data;
-    // std::shared_ptr<pinocchio::GeometryData> m_collisionData;
-    std::shared_ptr<pinocchio::GeometryData> m_visualData;
     std::vector<pinocchio::FrameIndex> m_bodyCoMFrames;
     core::State<InRoot>* m_fromRootModel;
 
@@ -147,4 +107,4 @@ namespace sofa::component::mapping
 
 #endif
 
-} // namespace sofa::component::mapping
+} // namespace sofa::component::mapping::nonlinear

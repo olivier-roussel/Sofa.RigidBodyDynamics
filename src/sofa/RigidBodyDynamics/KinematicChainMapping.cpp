@@ -25,7 +25,7 @@
 
 #include <sofa/core/ObjectFactory.h>
 
-namespace sofa::component::mapping
+namespace sofa::component::mapping::nonlinear
 {
 
 using namespace sofa::defaulttype;
@@ -37,6 +37,6 @@ int KinematicChainMappingClass = core::RegisterObject("Mapping between joint val
 template class SOFA_RIGIDBODYDYNAMICS_API KinematicChainMapping< Vec1Types, Rigid3Types, Rigid3Types >;
 
 
-} //namespace sofa::component::mapping
+} //namespace sofa::component::mapping::nonlinear
 
 
