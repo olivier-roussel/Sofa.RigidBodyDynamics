@@ -41,32 +41,39 @@ namespace sofa::component::mapping::nonlinear
   public:
     SOFA_CLASS(SOFA_TEMPLATE3(KinematicChainMapping, TIn, TInRoot, TOut), SOFA_TEMPLATE3(core::Multi2Mapping, TIn, TInRoot, TOut));
 
-    typedef core::Multi2Mapping<TIn, TInRoot, TOut> Inherit;
-    typedef TIn In;
-    typedef TInRoot InRoot;
-    typedef TOut Out;
-
-    // void apply(const core::MechanicalParams* mparams, DataVecCoord_t<Out>& out, const DataVecCoord_t<In>& in) override;
+    using Inherit = core::Multi2Mapping<TIn, TInRoot, TOut>;
+    using In = TIn;
+    using InRoot = TInRoot;
+    using Out = TOut;
 
     void apply(
-        const core::MechanicalParams *mparams, const type::vector<DataVecCoord_t<Out> *> &dataVecOutPos,
-        const type::vector<const DataVecCoord_t<In> *> &dataVecIn1Pos,
-        const type::vector<const DataVecCoord_t<InRoot> *> &dataVecIn2Pos) override;
+      const core::MechanicalParams* mparams,
+      const type::vector<DataVecCoord_t<Out> *>& dataVecOutPos,
+      const type::vector<const DataVecCoord_t<In> *>& dataVecIn1Pos,
+      const type::vector<const DataVecCoord_t<InRoot> *>& dataVecIn2Pos) override;
 
     void applyJ(
-        const core::MechanicalParams *mparams, const type::vector<DataVecDeriv_t<Out> *> &dataVecOutVel,
-        const type::vector<const DataVecDeriv_t<In> *> &dataVecIn1Vel,
-        const type::vector<const DataVecDeriv_t<InRoot> *> &dataVecIn2Vel) override;
-    void applyJT(
-        const core::MechanicalParams *mparams, const type::vector<DataVecDeriv_t<In> *> &dataVecOut1Force,
-        const type::vector<DataVecDeriv_t<InRoot> *> &dataVecOut2Force,
-        const type::vector<const DataVecDeriv_t<Out> *> &dataVecInForce) override;
-    void applyJT(
-        const core::ConstraintParams * /*cparams*/, const type::vector<DataMatrixDeriv_t<In> *> & /* dataMatOut1Const */,
-        const type::vector<DataMatrixDeriv_t<InRoot> *> & /*dataMatOut2Const*/,
-        const type::vector<const DataMatrixDeriv_t<Out> *> & /*dataMatInConst*/) override;
+      const core::MechanicalParams *mparams,
+      const type::vector<DataVecDeriv_t<Out> *> &dataVecOutVel,
+      const type::vector<const DataVecDeriv_t<In> *> &dataVecIn1Vel,
+      const type::vector<const DataVecDeriv_t<InRoot> *> &dataVecIn2Vel) override;
 
-    void applyDJT(const core::MechanicalParams * /*mparams*/, core::MultiVecDerivId /*inForce*/, core::ConstMultiVecDerivId /*outForce*/) override
+    void applyJT(
+      const core::MechanicalParams *mparams,
+      const type::vector<DataVecDeriv_t<In> *> &dataVecOut1Force,
+      const type::vector<DataVecDeriv_t<InRoot> *> &dataVecOut2Force,
+      const type::vector<const DataVecDeriv_t<Out> *> &dataVecInForce) override;
+
+    void applyJT(
+      const core::ConstraintParams * cparams,
+      const type::vector<DataMatrixDeriv_t<In> *> &dataMatOut1Const,
+      const type::vector<DataMatrixDeriv_t<InRoot> *> &dataMatOut2Const,
+      const type::vector<const DataMatrixDeriv_t<Out> *> &dataMatInConst) override;
+
+    void applyDJT(
+      const core::MechanicalParams * /*mparams*/,
+      core::MultiVecDerivId /*inForce*/,
+      core::ConstMultiVecDerivId /*outForce*/) override
     {
       // no op
     }
@@ -99,6 +106,29 @@ namespace sofa::component::mapping::nonlinear
     Data<sofa::Index> d_indexFromRoot; ///< Corresponding index if the base of the articulated system is attached to input2. Default is last index.
 
     void checkIndexFromRoot();
+
+    void apply(const core::MechanicalParams* mparams,
+      DataVecCoord_t<Out>& out,
+      const DataVecCoord_t<In>& in,
+      const DataVecCoord_t<InRoot>* inRoot);
+
+    void applyJ(
+      const core::MechanicalParams* mparams,
+      DataVecDeriv_t<Out>& out,
+      const DataVecDeriv_t<In>& in,
+      const DataVecDeriv_t<InRoot>* inRoot);
+
+    void applyJT(
+      const core::MechanicalParams *mparams,
+      DataVecDeriv_t<In>& out,
+      DataVecDeriv_t<InRoot>* outRoot,
+      const DataVecDeriv_t<Out>& in);
+
+    void applyJT(
+      const core::ConstraintParams *mparams,
+      DataMatrixDeriv_t<In>& out,
+      DataMatrixDeriv_t<InRoot>* outRoot,
+      const DataMatrixDeriv_t<Out>& in);
   };
 
 #if !defined(SOFA_COMPONENT_MAPPING_KINEMATICCHAINMAPPING_CPP)
