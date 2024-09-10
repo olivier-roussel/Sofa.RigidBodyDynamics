@@ -259,7 +259,7 @@ namespace sofa::rigidbodydynamics
 
     // --------------------------------------
     // TODO move to tests
-    // Testing constraints (applytJT with constraint matrices)
+    // Testing constraints with Franka robot URDF (applytJT with constraint matrices)
     // --------------------------------------
     simulation::Node *rootNode = dynamic_cast<simulation::Node *>(this->getContext()->getRootContext()); // access to root node
     const auto dummyNode = rootNode->createChild("dummyNode");
@@ -278,13 +278,14 @@ namespace sofa::rigidbodydynamics
 
     const auto mecDummyObject = New<sofa::component::statecontainer::MechanicalObject<Vec3Types>>();
     mecDummyObject->setName("mecDummyObject");
-    mecDummyObject->setTranslation(-0.19, -0.137099, -0.262249);
+    mecDummyObject->setTranslation(-0.5, 0., 0.9); // fix gripper 3d position
+    // mecDummyObject->setTranslation(-0.19, -0.137099, -0.262249);
     dummyNode->addObject(mecDummyObject);
 
     const auto restShapeForceFieldDummy = New<sofa::component::solidmechanics::spring::RestShapeSpringsForceField<Vec3Types>>();
     restShapeForceFieldDummy->setName("restShapeForceField_constraint");
     restShapeForceFieldDummy->d_points.setValue({0});
-    restShapeForceFieldDummy->d_stiffness.setValue({1.e3});
+    restShapeForceFieldDummy->d_stiffness.setValue({1.e5});
     dummyNode->addObject(restShapeForceFieldDummy);
 
     const auto bodyMassDummy = New<sofa::component::mass::UniformMass<Vec3Types>>();
@@ -327,7 +328,8 @@ namespace sofa::rigidbodydynamics
 
     const auto constraintMapping = New<sofa::component::mapping::nonlinear::RigidMapping<Rigid3Types, Vec3Types>>();
     constraintMapping->setModels(bodiesDof.get(), mecObject.get());
-    constraintMapping->d_index = model->nbodies -1; // apply on last body
+    constraintMapping->d_index = model->nbodies -3; // apply on Franka gripper
+    // constraintMapping->d_index = model->nbodies -1; // apply on last body
     constraintNode->addObject(constraintMapping);
     // --------------------------------------
     // End testing constraints
