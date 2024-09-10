@@ -36,6 +36,12 @@
 
 using namespace sofa::defaulttype;
 
+namespace {
+  constexpr auto kMinTorque = 1.e-6;
+
+  constexpr auto kMinTorqueSqrd = std::pow(kMinTorque, 2);
+}
+
 namespace sofa::component::mapping::nonlinear
 {
   template <class TIn, class TInRoot, class TOut>
@@ -497,7 +503,7 @@ namespace sofa::component::mapping::nonlinear
 
       if (m_fromRootModel and outRoot != nullptr)
       {
-        // if(jointsTorques.squaredNorm() > kMinTorqueSqrd)// dismiss dofs resulting in null torque
+        if(jointsTorques.squaredNorm() > kMinTorqueSqrd)// dismiss dofs resulting in null torque
         {
           // write (add) root joint spatial force
           helper::WriteAccessor<DataMatrixDeriv_t<InRoot>> _outRoot(outRoot);
@@ -517,7 +523,7 @@ namespace sofa::component::mapping::nonlinear
       else
       {
         // write summed joint torques for this constraint to output
-        // if(jointsTorques.squaredNorm() > kMinTorqueSqrd) // dismiss dofs resulting in null torque
+        if(jointsTorques.squaredNorm() > kMinTorqueSqrd) // dismiss dofs resulting in null torque
         {
           auto outRowIt = _out->writeLine(rowIt.index());
           for (auto i = 0ul; i < jointsTorques.size(); ++i)
