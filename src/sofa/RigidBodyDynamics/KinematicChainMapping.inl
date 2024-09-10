@@ -322,20 +322,21 @@ namespace sofa::component::mapping::nonlinear
     if (d_componentState.getValue() == sofa::core::objectmodel::ComponentState::Invalid)
       return;
 
-    VecCoord_t<In> inDofs = in.getValue();
+    helper::ReadAccessor< DataVecCoord_t<In> > _in = in;
+    helper::WriteOnlyAccessor< DataVecCoord_t<Out> > _out = out;
+
     Eigen::VectorXd q = Eigen::VectorXd::Zero(m_model->nq);
     if (m_fromRootModel and inRoot != nullptr)
     {
-      VecCoord_t<InRoot> inRootVec_w = inRoot->getValue();
-      // msg_info() << "inRootVec_w.size() = " << inRootVec_w.size();
+      helper::ReadAccessor< DataVecCoord_t<InRoot> > _inRoot = inRoot;
 
-      const sofa::defaulttype::RigidCoord<3, double> &rootPose_w = inRootVec_w[d_indexFromRoot.getValue()];
+      const sofa::defaulttype::RigidCoord<3, double> &rootPose_w = _inRoot[d_indexFromRoot.getValue()];
       q.head<7>() = sofa::rigidbodydynamics::se3ToEigen(rootPose_w);
-      q.tail(inDofs.size()) = sofa::rigidbodydynamics::vectorVec1ToEigen(inDofs, m_model->nq);
+      q.tail(_in.size()) = sofa::rigidbodydynamics::vectorVec1ToEigen(_in, m_model->nq);
     }
     else
     {
-      q = sofa::rigidbodydynamics::vectorVec1ToEigen(inDofs, m_model->nq);
+      q = sofa::rigidbodydynamics::vectorVec1ToEigen(_in, m_model->nq);
     }
 
     // Computes joints Jacobians and forward kinematics. Jacobians will
@@ -348,13 +349,10 @@ namespace sofa::component::mapping::nonlinear
     // msg_info() << " frames placements updated";
 
     // Single output vector of size njoints
-    // DataVecCoord_t<Out> *g_w = dataVecOutPos[0];
-
-    helper::WriteAccessor<DataVecCoord_t<Out>> accessor_g_w(out);
     for (auto bodyIdx = 0ul; bodyIdx < m_model->nbodies; ++bodyIdx)
     {
       const auto &frameIdx = m_bodyCoMFrames[bodyIdx];
-      accessor_g_w[bodyIdx] = sofa::rigidbodydynamics::se3ToSofaType(m_data->oMf[frameIdx]);
+      _out[bodyIdx] = sofa::rigidbodydynamics::se3ToSofaType(m_data->oMf[frameIdx]);
     }
   }
 
@@ -372,34 +370,34 @@ namespace sofa::component::mapping::nonlinear
     if (d_componentState.getValue() == sofa::core::objectmodel::ComponentState::Invalid)
       return;
 
-    // map in configuration to pinocchio
-    VecDeriv_t<In> inDofs = in.getValue();
+    helper::ReadAccessor< DataVecDeriv_t<In> > _in = in;
+    helper::WriteOnlyAccessor< DataVecDeriv_t<Out> > _out = out;
 
+    // map in configuration to pinocchio
     Eigen::VectorXd dq = Eigen::VectorXd::Zero(m_model->nv);
     if (m_fromRootModel and inRoot != nullptr)
     {
-      VecDeriv_t<InRoot> inRootVelVec_w = inRoot->getValue();
+      helper::ReadAccessor< DataVecDeriv_t<InRoot> > _inRoot = inRoot;
 
-      const sofa::defaulttype::RigidDeriv<3, double> &rootVel_w = inRootVelVec_w[d_indexFromRoot.getValue()];
+      const sofa::defaulttype::RigidDeriv<3, double> &rootVel_w = _inRoot[d_indexFromRoot.getValue()];
       dq.head<6>() = sofa::rigidbodydynamics::spatialVelocityToEigen(rootVel_w);
-      dq.tail(inDofs.size()) = sofa::rigidbodydynamics::vectorVec1ToEigen(inDofs, m_model->nv);
+      dq.tail(_in.size()) = sofa::rigidbodydynamics::vectorVec1ToEigen(_in, m_model->nv);
     }
     else
     {
-      dq = sofa::rigidbodydynamics::vectorVec1ToEigen(inDofs, m_model->nv);
+      dq = sofa::rigidbodydynamics::vectorVec1ToEigen(_in, m_model->nv);
     }
 
     // Single output vector of size njoints
-    assert(out.getValue().size() == m_model->njoints);
+    assert(_out.size() == m_model->njoints);
 
-    helper::WriteAccessor<DataVecDeriv_t<Out>> accessor_dgdq_w(out);
     for (auto bodyIdx = 0ul; bodyIdx < m_model->nbodies; ++bodyIdx)
     {
       pinocchio::Data::Matrix6x J = pinocchio::Data::Matrix6x::Zero(6, m_model->nv);
       const auto &frameIdx = m_bodyCoMFrames[bodyIdx];
       pinocchio::getFrameJacobian(*m_model, *m_data, frameIdx, pinocchio::LOCAL_WORLD_ALIGNED, J);
       Eigen::VectorXd dg = J * dq;
-      accessor_dgdq_w[bodyIdx] = sofa::rigidbodydynamics::vec6ToSofaType<Eigen::VectorXd>(dg);
+      _out[bodyIdx] = sofa::rigidbodydynamics::vec6ToSofaType<Eigen::VectorXd>(dg);
     }
   }
 
@@ -420,19 +418,17 @@ namespace sofa::component::mapping::nonlinear
     // maps spatial forces applied on each body to torques on joints
 
     // out will be the resulting torque on each joint
-    helper::WriteAccessor<DataVecDeriv_t<In>> outTorquesWa(out);
     // size = nv if no root joint, nv+6 if using free-flyer root joint
-
+    helper::WriteAccessor<DataVecDeriv_t<In>> _out(out);
     // in is a vector of spatial forces for each body
-    helper::ReadAccessor<DataVecDeriv_t<Out>> inWrenchRa(in);
     // size = nbodies
-    // msg_info() << "input bodies forces: ra_wrench_w = " << ra_wrench_w;
+    helper::ReadAccessor<DataVecDeriv_t<Out>> _in(in);
 
     Eigen::VectorXd jointsTorques = Eigen::VectorXd::Zero(m_model->nv);
     for (auto bodyIdx = 0ul; bodyIdx < m_model->nbodies; ++bodyIdx)
     {
       // bodyForce is a spatial force so 6-vector
-      const Eigen::VectorXd bodyForce = sofa::rigidbodydynamics::vectorToEigen(inWrenchRa[bodyIdx], 6);
+      const Eigen::VectorXd bodyForce = sofa::rigidbodydynamics::vectorToEigen(_in[bodyIdx], 6);
       pinocchio::Data::Matrix6x J = pinocchio::Data::Matrix6x::Zero(6, m_model->nv);
       const auto &frameIdx = m_bodyCoMFrames[bodyIdx];
 
@@ -443,14 +439,13 @@ namespace sofa::component::mapping::nonlinear
     if (m_fromRootModel and outRoot != nullptr)
     {
       // joint torques contains first 6 parameters for the root joint, and nv-6 parameters for other joints
-      helper::WriteAccessor<DataVecDeriv_t<InRoot>> outRootWrenchWa(outRoot);
-      // msg_info() << "wa_rootWrench_w size = " << wa_rootWrench_w.size();
+      helper::WriteAccessor<DataVecDeriv_t<InRoot>> _outRoot(outRoot);
       // write (add) root joint spatial force
-      outRootWrenchWa[0] += sofa::rigidbodydynamics::vec6ToSofaType(jointsTorques.head<6>());
+      _outRoot[0] += sofa::rigidbodydynamics::vec6ToSofaType(jointsTorques.head<6>());
       // write (add) joint torques
       for (auto i = 0ul; i < jointsTorques.size() - 6; ++i)
       {
-        outTorquesWa[i][0] += jointsTorques[i + 6];
+        _out[i][0] += jointsTorques[i + 6];
       }
     }
     else
@@ -458,10 +453,9 @@ namespace sofa::component::mapping::nonlinear
       // no root joints case, only write (add) joint torques
       for (auto i = 0ul; i < jointsTorques.size(); ++i)
       {
-        outTorquesWa[i][0] += jointsTorques[i];
+        _out[i][0] += jointsTorques[i];
       }
     }
-    // msg_info() << "********* END KinematicChainMapping applyJT";
   }
 
   template <class TIn, class TInRoot, class TOut>
@@ -479,13 +473,11 @@ namespace sofa::component::mapping::nonlinear
       return;
 
     // out will be the resulting torque on each joint
-    helper::WriteAccessor<DataMatrixDeriv_t<In>> outTorquesWa(out);
-
-    // dataMatInConst
-    helper::ReadAccessor<DataMatrixDeriv_t<Out>> inWrenchRa(in);
+    helper::WriteAccessor<DataMatrixDeriv_t<In>> _out(out);
+    helper::ReadAccessor<DataMatrixDeriv_t<Out>> _in(in);
 
     // row = constraint
-    for (auto rowIt = inWrenchRa->begin(); rowIt != inWrenchRa->end(); ++rowIt)
+    for (auto rowIt = _in->begin(); rowIt != _in->end(); ++rowIt)
     {
       Eigen::VectorXd jointsTorques = Eigen::VectorXd::Zero(m_model->nv);
       // col = dof (bodies)
@@ -505,38 +497,44 @@ namespace sofa::component::mapping::nonlinear
 
       if (m_fromRootModel and outRoot != nullptr)
       {
-        // write (add) root joint spatial force
-        helper::WriteAccessor<DataMatrixDeriv_t<InRoot>> outRootWrenchWa(outRoot);
-        auto oRoot = outRootWrenchWa->writeLine(rowIt.index());
-        const Deriv_t<InRoot> rootWrench(sofa::rigidbodydynamics::vec6ToSofaType(jointsTorques.head<6>()));
-        oRoot.addCol(0, rootWrench);
-        // write summed joint torques for this constraint to output
-        auto outRowIt = outTorquesWa->writeLine(rowIt.index());
-        for (auto i = 0ul; i < jointsTorques.size() - 6; ++i)
+        // if(jointsTorques.squaredNorm() > kMinTorqueSqrd)// dismiss dofs resulting in null torque
         {
-          const Deriv_t<In> torque(jointsTorques[i + 6]); // InDeriv is Vec1 type
-          outRowIt.addCol(i, torque);
+          // write (add) root joint spatial force
+          helper::WriteAccessor<DataMatrixDeriv_t<InRoot>> _outRoot(outRoot);
+
+          auto oRoot = _outRoot->writeLine(rowIt.index());
+          const Deriv_t<InRoot> rootWrench(sofa::rigidbodydynamics::vec6ToSofaType(jointsTorques.head<6>()));
+          oRoot.addCol(0, rootWrench);
+          // write summed joint torques for this constraint to output
+          auto outRowIt = _out->writeLine(rowIt.index());
+          for (auto i = 0ul; i < jointsTorques.size() - 6; ++i)
+          {
+            const Deriv_t<In> torque(jointsTorques[i + 6]); // InDeriv is Vec1 type
+            outRowIt.addCol(i, torque);
+          }
         }
       }
       else
       {
         // write summed joint torques for this constraint to output
-        auto outRowIt = outTorquesWa->writeLine(rowIt.index());
-        for (auto i = 0ul; i < jointsTorques.size(); ++i)
+        // if(jointsTorques.squaredNorm() > kMinTorqueSqrd) // dismiss dofs resulting in null torque
         {
-          const Deriv_t<In> torque(jointsTorques[i]); // InDeriv is Vec1 type
-          outRowIt.addCol(i, torque);
+          auto outRowIt = _out->writeLine(rowIt.index());
+          for (auto i = 0ul; i < jointsTorques.size(); ++i)
+          {
+            const Deriv_t<In> torque(jointsTorques[i]); // InDeriv is Vec1 type
+            outRowIt.addCol(i, torque);
+          }
         }
       }
     }
 
-    // print output matrices
-    // if (m_fromRootModel and not dataMatOut2Const.empty())
+    // // print output matrices
+    // if (m_fromRootModel and outRoot != nullptr)
     // {
     //   msg_info() << "outRootWrench CRS matrix:";
-    //   InRootDataMatrixDeriv *outRootWrench = dataMatOut2Const[0];
-    //   helper::WriteAccessor<InRootDataMatrixDeriv> outRootWrenchWa(outRootWrench);
-    //   for (auto rowIt = outRootWrenchWa->begin(); rowIt != outRootWrenchWa->end(); ++rowIt)
+    //     helper::WriteAccessor<DataMatrixDeriv_t<InRoot>> _outRoot(outRoot);
+    //   for (auto rowIt = _outRoot->begin(); rowIt != _outRoot->end(); ++rowIt)
     //   {
     //     for (auto colIt = rowIt.begin(); colIt != rowIt.end(); ++colIt)
     //     {
@@ -545,15 +543,13 @@ namespace sofa::component::mapping::nonlinear
     //   }
     // }
     // msg_info() << "outTorques CRS matrix:";
-    // for (auto rowIt = outTorquesWa->begin(); rowIt != outTorquesWa->end(); ++rowIt)
+    // for (auto rowIt = _out->begin(); rowIt != _out->end(); ++rowIt)
     // {
     //   for (auto colIt = rowIt.begin(); colIt != rowIt.end(); ++colIt)
     //   {
     //     msg_info() << "row[" << rowIt.index() << "], col[" << colIt.index() << "]:" << colIt.val();
     //   }
     // }
-
-    // msg_info() << "********* END KinematicChainMapping applyJT On MatrixDeriv";
   }
 
 } // namespace sofa::component::mapping::nonlinear
