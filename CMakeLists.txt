@@ -6,13 +6,6 @@ find_package(Sofa.Component.StateContainer REQUIRED)
 find_package(Sofa.Component.Mapping.NonLinear REQUIRED)
 find_package(Sofa.Component.Mass REQUIRED)
 find_package(Sofa.Component.SolidMechanics REQUIRED)
-# find_package(Sofa.Component.MechanicalLoad REQUIRED) # for testing with constant force field
-find_package(Sofa.Component.Constraint.Lagrangian.Model REQUIRED) # for testing constraints
-find_package(Sofa.Component.Constraint.Lagrangian.Solver REQUIRED) # for testing constraints
-find_package(Sofa.Component.LinearSolver REQUIRED) # for testing constraints
-find_package(Sofa.Component.Constraint.Lagrangian.Correction REQUIRED) # for testing constraints
-find_package(Sofa.Component.ODESolver REQUIRED) # for testing constraints
-find_package(Sofa.Component.Topology.Container.Constant REQUIRED)
 find_package(Sofa.GL.Component.Rendering3D REQUIRED)
 
 # List all files
@@ -47,13 +40,6 @@ target_link_libraries(${PROJECT_NAME}
   Sofa.Component.Mapping.NonLinear
   Sofa.Component.Mass
   Sofa.Component.SolidMechanics
-  # Sofa.Component.MechanicalLoad
-  Sofa.Component.Topology.Container.Constant
-  Sofa.Component.Constraint.Lagrangian.Correction
-  Sofa.Component.Constraint.Lagrangian.Model
-  Sofa.Component.Constraint.Lagrangian.Solver
-  Sofa.Component.LinearSolver
-  Sofa.Component.ODESolver
   Sofa.GL.Component.Rendering3D
   pinocchio::pinocchio
   )
