@@ -29,23 +29,13 @@
 #include <sofa/component/mapping/nonlinear/RigidMapping.h>
 #include <sofa/component/mass/UniformMass.h>
 #include <sofa/component/statecontainer/MechanicalObject.h>
-#include <sofa/component/solidmechanics/spring/RestShapeSpringsForceField.h>
-// #include <sofa/component/mechanicalload/ConstantForceField.h>
-
-// for testing constraints
-#include <sofa/component/constraint/lagrangian/model/BilateralLagrangianConstraint.h>
-#include <sofa/component/constraint/lagrangian/solver/GenericConstraintSolver.h>
-#include <sofa/component/linearsolver/direct/SparseLDLSolver.h>
-#include <sofa/component/odesolver/backward/EulerImplicitSolver.h>
-#include <sofa/component/constraint/lagrangian/correction/GenericConstraintCorrection.h>
+#include <sofa/component/solidmechanics/spring/RestShapeSpringsForceField.h> // TODO remove from here and move to external scene
 
 #include <sofa/defaulttype/RigidTypes.h>
 #include <sofa/gl/component/rendering3d/OglModel.h>
 #include <sofa/simulation/Node.h>
 
 #include <pinocchio/parsers/urdf.hpp>
-#include <pinocchio/algorithm/kinematics.hpp> // XXX
-#include <hpp/fcl/collision_object.h>         // XXX
 
 using namespace sofa::defaulttype;
 
@@ -55,22 +45,11 @@ using MechanicalObjectRigid3 = sofa::component::statecontainer::MechanicalObject
 namespace sofa::rigidbodydynamics
 {
 
-  URDFModelLoader::URDFModelLoader()
-      : d_urdfFilename(initData(&d_urdfFilename, "urdfFilename", "Filename of the URDF model")), 
+  URDFModelLoader::URDFModelLoader() : sofa::core::loader::SceneLoader() ,
       d_modelDirectory(initData(&d_modelDirectory, "modelDirectory", "Directory containing robot models")),
       d_useFreeFlyerRootJoint(initData(&d_useFreeFlyerRootJoint, false, "useFreeFlyerRootJoint", "True if root joint is a Free Flyer joint, false if none")),
       d_q0(initData(&d_q0, "q0", "Default configuration values of robot DoFs"))
   {
-  }
-
-  void URDFModelLoader::setURDFFilename(const std::string &f)
-  {
-    d_urdfFilename.setValue(f);
-  }
-
-  const std::string &URDFModelLoader::getURDFFilename()
-  {
-    return d_urdfFilename.getValue();
   }
 
   void URDFModelLoader::setModelDirectory(const std::string &f)
@@ -93,14 +72,19 @@ namespace sofa::rigidbodydynamics
     return d_useFreeFlyerRootJoint.getValue();
   }
 
-  void URDFModelLoader::init()
-  {
-    this->reinit();
-  }
-
   void URDFModelLoader::reinit()
   {
-    const std::string &urdfFilename = d_urdfFilename.getValue();
+    // no op
+  }
+
+  void URDFModelLoader::init()
+  {
+    // no op
+  }
+
+  bool URDFModelLoader::load()
+  {
+    const std::string &urdfFilename = getFilename();
     const std::string &modelDir = d_modelDirectory.getValue();
     const bool useFreeFlyerRootJoint = d_useFreeFlyerRootJoint.getValue();
 
@@ -159,6 +143,7 @@ namespace sofa::rigidbodydynamics
         msg_info() << "Joint[" << jointIdx << "]: " << model->names[jointIdx] << " / " << model->joints[jointIdx];
       }
 
+      // TODO use collisionModel to create collision nodes in SOFA
       collisionModel = std::make_shared<pinocchio::GeometryModel>();
       pinocchio::urdf::buildGeom(*model, urdfFilename, pinocchio::COLLISION, *collisionModel, modelDir);
       // msg_info() << "Built robot collision model from URDF file: " << urdf_filename;
@@ -180,7 +165,7 @@ namespace sofa::rigidbodydynamics
     {
       msg_error() << "Caught exception: " << e.what();
       d_componentState.setValue(sofa::core::objectmodel::ComponentState::Invalid);
-      return;
+      return false;
     }
 
     // create robot scene tree
@@ -256,84 +241,6 @@ namespace sofa::rigidbodydynamics
       // set mapping input2
       kinematicChainMapping->addInputModel2(rootJointDof.get());
     }
-
-    // --------------------------------------
-    // TODO move to tests
-    // Testing constraints with Franka robot URDF (applytJT with constraint matrices)
-    // --------------------------------------
-    simulation::Node *rootNode = dynamic_cast<simulation::Node *>(this->getContext()->getRootContext()); // access to root node
-    const auto dummyNode = rootNode->createChild("dummyNode");
-
-    const auto constraintSolver = New<sofa::component::linearsolver::direct::SparseLDLSolver< sofa::linearalgebra::CompressedRowSparseMatrix< sofa::type::Mat<3,3,SReal> >,sofa::linearalgebra::FullVector<SReal> >>();
-    constraintSolver->setName("SparseLDLSolver_constraint");
-    dummyNode->addObject(constraintSolver);
-
-    const auto implicitSolver = New<sofa::component::odesolver::backward::EulerImplicitSolver>();
-    implicitSolver->setName("EulerImplicitSolver_constraint");
-    dummyNode->addObject(implicitSolver);
-
-    const auto genericConstraintCorrection = New<sofa::component::constraint::lagrangian::correction::GenericConstraintCorrection>();
-    genericConstraintCorrection->setName("GenericConstraintCorrection_constraint");
-    dummyNode->addObject(genericConstraintCorrection);
-
-    const auto mecDummyObject = New<sofa::component::statecontainer::MechanicalObject<Vec3Types>>();
-    mecDummyObject->setName("mecDummyObject");
-    mecDummyObject->setTranslation(-0.5, 0., 0.9); // fix gripper 3d position
-    // mecDummyObject->setTranslation(-0.19, -0.137099, -0.262249);
-    dummyNode->addObject(mecDummyObject);
-
-    const auto restShapeForceFieldDummy = New<sofa::component::solidmechanics::spring::RestShapeSpringsForceField<Vec3Types>>();
-    restShapeForceFieldDummy->setName("restShapeForceField_constraint");
-    restShapeForceFieldDummy->d_points.setValue({0});
-    restShapeForceFieldDummy->d_stiffness.setValue({1.e5});
-    dummyNode->addObject(restShapeForceFieldDummy);
-
-    const auto bodyMassDummy = New<sofa::component::mass::UniformMass<Vec3Types>>();
-    bodyMassDummy->setName("mass_constraint");
-    bodyMassDummy->setTotalMass(1.);
-    dummyNode->addObject(bodyMassDummy);
-
-    auto rootGenericConstraintSolverObj = rootNode->getObject("GenericConstraintSolver");
-    if(rootGenericConstraintSolverObj)
-    {
-      const auto rootGenericConstraintSolver = dynamic_cast<sofa::component::constraint::lagrangian::solver::GenericConstraintSolver *>(rootGenericConstraintSolverObj);
-      if(rootGenericConstraintSolver)
-      {
-        msg_info() << "Successfully found back object GenericConstraintSolver";
-        rootGenericConstraintSolver->init();
-        // rootGenericConstraintSolver->l_constraintCorrections.add(genericConstraintCorrection);
-        // genericConstraintCorrection->addConstraintSolver(rootGenericConstraintSolver);
-      }
-      else
-      {
-        msg_error() << "Failed to cast object GenericConstraintSolver";
-      }
-    }
-    else
-    {
-      msg_error() << "Failed to find object GenericConstraintSolver";
-    }
-
-    const auto constraintNode = bodiesNode->createChild("Constraints");
-    const auto mecObject = New<sofa::component::statecontainer::MechanicalObject<Vec3Types>>();
-    mecObject->setName("mecObject");
-    mecObject->setTranslation(0., 0., 0.);
-    constraintNode->addObject(mecObject);
-
-    const auto constraint = New<sofa::component::constraint::lagrangian::model::BilateralLagrangianConstraint<Vec3Types>>(mecObject.get(), mecDummyObject.get());
-    const auto nullPoint = Vec3Types::Coord(0., 0., 0.);
-    constraint->addContact(Vec3Types::Deriv(), nullPoint, nullPoint, 0., 0, 0, nullPoint, nullPoint, 0l, sofa::component::constraint::lagrangian::model::BilateralLagrangianConstraint<Vec3Types>::BilateralLagrangianConstraint::PersistentID());
-    constraint->setName("constraint");
-    constraintNode->addObject(constraint);
-
-    const auto constraintMapping = New<sofa::component::mapping::nonlinear::RigidMapping<Rigid3Types, Vec3Types>>();
-    constraintMapping->setModels(bodiesDof.get(), mecObject.get());
-    constraintMapping->d_index = model->nbodies -3; // apply on Franka gripper
-    // constraintMapping->d_index = model->nbodies -1; // apply on last body
-    constraintNode->addObject(constraintMapping);
-    // --------------------------------------
-    // End testing constraints
-    // --------------------------------------
 
     msg_info() << "-- model->nbodies" << model->nbodies;
     msg_info() << "-- model->njoints" << model->njoints;
@@ -418,6 +325,8 @@ namespace sofa::rigidbodydynamics
     }
 
     msg_info() << "Model has " << model->referenceConfigurations.size() << " reference configurations registered";
+
+    return true;
   }
 
 } /// namespace sofa::rigidbodydynamics

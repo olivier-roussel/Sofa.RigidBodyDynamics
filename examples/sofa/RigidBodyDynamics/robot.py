@@ -3,16 +3,9 @@ import os
 import numpy as np
 import pinocchio
 
-# urdf_file = 'example-robot-data/robots/baxter_description/urdf/baxter.urdf'
 # urdf_file = 'example-robot-data/robots/ur_description/urdf/ur10_robot.urdf'
-# urdf_file = 'example-robot-data/robots/double_pendulum_description/urdf/double_pendulum_simple.urdf'
-# urdf_file = 'example-robot-data/robots/talos_data/robots/talos_full_v2.urdf'
 # urdf_file = 'example-robot-data/robots/talos_data/robots/talos_reduced_corrected.urdf'
 # urdf_file = 'example-robot-data/robots/solo_description/robots/solo.urdf'
-# urdf_file = 'example-robot-data/robots/anymal_c_simple_description/urdf/anymal.urdf'
-# urdf_file = 'example-robot-data/robots/tiago_description/robots/tiago_no_hand.urdf'
-# urdf_file = 'example-robot-data/robots/romeo_description/urdf/romeo.urdf'
-# urdf_file = 'example-robot-data/robots/romeo_description/urdf/romeo_debug.urdf'
 urdf_file = 'example-robot-data/robots/panda_description/urdf/panda.urdf'
 
 useFFRootJoint=False
@@ -46,7 +39,7 @@ class Robot:
         #robotNode.addObject('CGLinearSolver', name='Solver', iterations=200)
         robotNode.addObject('SparseLDLSolver', template="CompressedRowSparseMatrixMat3x3d")
         robotNode.addObject('GenericConstraintCorrection')
-        urdfLoader = robotNode.addObject('URDFModelLoader', name='URDFModelLoader', urdfFilename=urdf_full_filename, modelDirectory=model_path, useFreeFlyerRootJoint=useFFRootJoint, printLog=True)
+        urdfLoader = robotNode.addObject('URDFModelLoader', name='URDFModelLoader', filename=urdf_full_filename, modelDirectory=model_path, useFreeFlyerRootJoint=useFFRootJoint, printLog=True)
 
         return robotNode
 

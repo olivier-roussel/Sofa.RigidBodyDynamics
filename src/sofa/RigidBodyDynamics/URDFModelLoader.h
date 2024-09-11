@@ -23,7 +23,7 @@
 
 #include <sofa/RigidBodyDynamics/config.h>
 
-#include <sofa/core/objectmodel/BaseObject.h>
+#include <sofa/core/loader/SceneLoader.h>
 #include <sofa/core/objectmodel/DataFileName.h>
 
 namespace sofa::rigidbodydynamics
@@ -31,13 +31,10 @@ namespace sofa::rigidbodydynamics
 
   using namespace core::objectmodel;
 
-  class SOFA_RIGIDBODYDYNAMICS_API URDFModelLoader : public BaseObject
+  class SOFA_RIGIDBODYDYNAMICS_API URDFModelLoader : public sofa::core::loader::SceneLoader
   {
   public:
-    SOFA_CLASS(URDFModelLoader, BaseObject);
-
-    void setURDFFilename(const std::string &f);
-    const std::string &getURDFFilename() /*const*/;
+    SOFA_CLASS(URDFModelLoader, sofa::core::loader::SceneLoader);
 
     void setModelDirectory(const std::string &d);
     const std::string &getModelDirectory() /*const*/;
@@ -49,7 +46,8 @@ namespace sofa::rigidbodydynamics
 
     void reinit() override;
 
-    DataFileName d_urdfFilename;
+    bool load() override;
+
     Data<std::string> d_modelDirectory;
     Data<bool> d_useFreeFlyerRootJoint;
     Data<sofa::type::vector<sofa::type::Vec1d>> d_q0;
