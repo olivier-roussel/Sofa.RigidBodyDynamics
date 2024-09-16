@@ -8,6 +8,8 @@ import pinocchio
 # urdf_file = 'example-robot-data/robots/solo_description/robots/solo.urdf'
 urdf_file = 'example-robot-data/robots/panda_description/urdf/panda.urdf'
 
+# Set this to true if you want to add a Free-flyer joint a top or robot hierarchy 
+# (i.e. the robot has a 6-dofs free floating base)
 useFFRootJoint=False
 
 if not "URDF_MODEL_PATH" in os.environ:
@@ -41,6 +43,21 @@ class Robot:
         robotNode.addObject('GenericConstraintCorrection')
         urdfLoader = robotNode.addObject('URDFModelLoader', name='URDFModelLoader', filename=urdf_full_filename, modelDirectory=model_path, useFreeFlyerRootJoint=useFFRootJoint, printLog=True)
 
+        jointsNode = robotNode.getChild('Joints')
+        dofs = jointsNode.getObject('dofs')
+        nqWithoutRootJoint = dofs.size.value
+        # Beware that configuration space number of parameters != configuration space dimension
+        # and its tangent space may have a different number of parameters
+        print('Robot configuration space number of parameters (without Free-flyer root joint if any) = ', nqWithoutRootJoint)
+
+        # Add a spring force field to its rest configuration
+        jointsNode.addObject('RestShapeSpringsForceField', stiffness=1e3, points=list(range(nqWithoutRootJoint)))
+
+        # Also add a spring force field to root Free-flyer joint rest configuration, if any
+        if useFFRootJoint:
+          rootJointNode = robotNode.getChild('RootJoint')
+          rootJointNode.addObject('RestShapeSpringsForceField', stiffness=1e3, angularStiffness=1e3, points=[0])
+
         return robotNode
 
 
@@ -48,7 +65,7 @@ class Robot:
 def createScene(rootNode):
 
     from header import addHeader
-    from robotGUI import RobotGUI  # Uncomment this if you want to use the GUI
+    from robotGUI import RobotGUI
 
     addHeader(rootNode)
 
@@ -56,6 +73,7 @@ def createScene(rootNode):
     robot = Robot(rootNode)
     robotNode = robot.addRobot()
 
-    robotNode.addObject(RobotGUI(robot = robotNode))  # Uncomment this if you want to use the GUI
+    # RobotGUI can be used to set interactively robot rest configuration
+    robotNode.addObject(RobotGUI(robot = robotNode))
 
     return

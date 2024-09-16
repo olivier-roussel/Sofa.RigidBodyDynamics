@@ -6,6 +6,8 @@ import Sofa
 
 urdf_file = 'example-robot-data/robots/panda_description/urdf/panda.urdf'
 
+# Set this to true if you want to add a Free-flyer joint a top or robot hierarchy 
+# (i.e. the robot has a 6-dofs free floating base)
 useFFRootJoint=False
 
 if not "URDF_MODEL_PATH" in os.environ:
@@ -43,8 +45,22 @@ class Robot:
         robotNode.addObject('GenericConstraintCorrection')
         urdfLoader = robotNode.addObject('URDFModelLoader', name='URDFModelLoader', filename=urdf_full_filename, modelDirectory=model_path, useFreeFlyerRootJoint=useFFRootJoint, printLog=True)
 
-        # add dummy mechanical object to which we will attach
-        # the robot gripper
+        jointsNode = robotNode.getChild('Joints')
+        dofs = jointsNode.getObject('dofs')
+        nqWithoutRootJoint = dofs.size.value
+        # Beware that configuration space number of parameters != configuration space dimension
+        # and its tangent space may have a different number of parameters
+        print('Robot configuration space number of parameters (without Free-flyer root joint if any) = ', nqWithoutRootJoint)
+
+        # Add a spring force field to its rest configuration
+        jointsNode.addObject('RestShapeSpringsForceField', stiffness=1e3, points=list(range(nqWithoutRootJoint)))
+
+        # Also add a spring force field to root Free-flyer joint rest configuration, if any
+        if useFFRootJoint:
+          rootJointNode = robotNode.getChild('RootJoint')
+          rootJointNode.addObject('RestShapeSpringsForceField', stiffness=1e3, angularStiffness=1e3, points=[0])
+
+        # Add dummy mechanical object to which we will attach the robot gripper
         dummyNode = self.node.addChild('dummyNode')
         dummyNode.addObject('SparseLDLSolver', template="CompressedRowSparseMatrixMat3x3d")
         dummyNode.addObject('EulerImplicitSolver')
@@ -53,8 +69,7 @@ class Robot:
         dummyNode.addObject('RestShapeSpringsForceField', stiffness=1e5, points=[0])
         dummyNode.addObject('UniformMass', totalMass=1)
 
-
-        # create constraint and the dummy mechanical object (3d position)
+        # Create constraint between gripper and the dummy mechanical object (3d position)
         constraintBodyIndex = 7
         jointsNode = robotNode.getChild('Joints')
         bodiesNode = jointsNode.getChild('Bodies')
@@ -70,7 +85,7 @@ class Robot:
 def createScene(rootNode):
 
     from header import addHeader
-    from robotGUI import RobotGUI  # Uncomment this if you want to use the GUI
+    from robotGUI import RobotGUI
 
     addHeader(rootNode)
 
@@ -78,6 +93,7 @@ def createScene(rootNode):
     robot = Robot(rootNode)
     robotNode = robot.addRobot()
 
-    robotNode.addObject(RobotGUI(robot = robotNode))  # Uncomment this if you want to use the GUI
+    # RobotGUI can be used to set interactively robot rest configuration
+    robotNode.addObject(RobotGUI(robot = robotNode))
 
     return

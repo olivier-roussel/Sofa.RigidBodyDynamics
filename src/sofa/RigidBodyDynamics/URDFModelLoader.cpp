@@ -29,7 +29,6 @@
 #include <sofa/component/mapping/nonlinear/RigidMapping.h>
 #include <sofa/component/mass/UniformMass.h>
 #include <sofa/component/statecontainer/MechanicalObject.h>
-#include <sofa/component/solidmechanics/spring/RestShapeSpringsForceField.h> // TODO remove from here and move to external scene
 
 #include <sofa/defaulttype/RigidTypes.h>
 #include <sofa/gl/component/rendering3d/OglModel.h>
@@ -185,18 +184,6 @@ namespace sofa::rigidbodydynamics
     jointsDofs->x0.setParent(&d_q0);
     jointsNode->addObject(jointsDofs);
 
-    // spring to control robot dofs to desired dofs set by rest position (x0)
-    const auto restShapeForceField = New<sofa::component::solidmechanics::spring::RestShapeSpringsForceField<Vec1Types>>();
-    restShapeForceField->setName("RestShapeSpringsForceField");
-    restShapeForceField->d_stiffness.setValue({1.e3});
-    sofa::type::vector<sofa::Index> pointsIndexes;
-    for (sofa::Index idx = 0ul; idx < nqWithoutRootJoint; ++idx)
-    {
-      pointsIndexes.push_back(idx);
-    }
-    restShapeForceField->d_points.setValue(pointsIndexes);
-    jointsNode->addObject(restShapeForceField);
-
     const auto bodiesNode = jointsNode->createChild("Bodies");
 
     // create mapping between robot joints dofs and its bodies placements
@@ -227,13 +214,6 @@ namespace sofa::rigidbodydynamics
       rootJointDof->setName("Free-Flyer");
       rootJointDof->resize(1);
       rootJointNode->addObject(rootJointDof);
-      
-      const auto rootRestShapeForceField = New<sofa::component::solidmechanics::spring::RestShapeSpringsForceField<Rigid3Types>>();
-      rootRestShapeForceField->setName("root joint spring force field");
-      rootRestShapeForceField->d_stiffness.setValue({1.e3});
-      rootRestShapeForceField->d_angularStiffness.setValue({1.e3});
-      rootRestShapeForceField->d_points.setValue({0});
-      rootJointNode->addObject(rootRestShapeForceField);
 
       // Bodies node have two parents: rootJointNode and jointsNode
       rootJointNode->addChild(bodiesNode);
