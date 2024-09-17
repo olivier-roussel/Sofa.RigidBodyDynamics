@@ -61,7 +61,7 @@ namespace
       // apply transfrom and set to mesh data
       for(const auto& pt: boxPts)
       {
-        const auto ptTf = tf.act(pt).cwiseProduct(scale);
+        const pinocchio::SE3::Vector3 ptTf = tf.act(pt).cwiseProduct(scale.cwiseAbs());
         meshTopology->addPoint(ptTf[0], ptTf[1], ptTf[2]);
       }
       // add faces
@@ -71,6 +71,7 @@ namespace
       meshTopology->addQuad(3, 2, 6, 5);
       meshTopology->addQuad(1, 7, 6, 2);
       meshTopology->addQuad(0, 3, 5, 4);
+
       break;
     }
     default:
