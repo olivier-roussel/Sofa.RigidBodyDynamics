@@ -65,12 +65,30 @@ namespace
         meshTopology->addPoint(ptTf[0], ptTf[1], ptTf[2]);
       }
       // add faces
-      meshTopology->addQuad(0, 1, 2, 3);
-      meshTopology->addQuad(4, 5, 6, 7);
-      meshTopology->addQuad(4, 7, 1, 0);
-      meshTopology->addQuad(3, 2, 6, 5);
-      meshTopology->addQuad(1, 7, 6, 2);
-      meshTopology->addQuad(0, 3, 5, 4);
+      // meshTopology->addQuad(0, 1, 2, 3);
+      // meshTopology->addQuad(4, 5, 6, 7);
+      // meshTopology->addQuad(4, 7, 1, 0);
+      // meshTopology->addQuad(3, 2, 6, 5);
+      // meshTopology->addQuad(1, 7, 6, 2);
+      // meshTopology->addQuad(0, 3, 5, 4);
+
+      meshTopology->addTriangle(0, 1, 2);
+      meshTopology->addTriangle(0, 2, 3);
+
+      meshTopology->addTriangle(4, 5, 6);
+      meshTopology->addTriangle(4, 6, 7);
+
+      meshTopology->addTriangle(4, 7, 1);
+      meshTopology->addTriangle(4, 1, 0);
+
+      meshTopology->addTriangle(3, 2, 6);
+      meshTopology->addTriangle(3, 6, 5);
+
+      meshTopology->addTriangle(1, 7, 6);
+      meshTopology->addTriangle(1, 6, 2);
+
+      meshTopology->addTriangle(0, 3, 5);
+      meshTopology->addTriangle(0, 5, 4);
 
       break;
     }

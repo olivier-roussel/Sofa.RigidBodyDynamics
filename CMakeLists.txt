@@ -5,6 +5,7 @@ find_package(Sofa.Simulation.Core REQUIRED)
 find_package(Sofa.Component.StateContainer REQUIRED)
 find_package(Sofa.Component.Mapping.NonLinear REQUIRED)
 find_package(Sofa.Component.Mass REQUIRED)
+find_package(Sofa.Component.Collision.Geometry REQUIRED)
 find_package(Sofa.GL.Component.Rendering3D REQUIRED)
 
 # List all files
@@ -38,6 +39,7 @@ target_link_libraries(${PROJECT_NAME}
   Sofa.Component.StateContainer
   Sofa.Component.Mapping.NonLinear
   Sofa.Component.Mass
+  Sofa.Component.Collision.Geometry
   Sofa.GL.Component.Rendering3D
   pinocchio::pinocchio
   )

@@ -6,7 +6,9 @@ import pinocchio
 # urdf_file = 'example-robot-data/robots/ur_description/urdf/ur10_robot.urdf'
 # urdf_file = 'example-robot-data/robots/talos_data/robots/talos_reduced_corrected.urdf'
 # urdf_file = 'example-robot-data/robots/solo_description/robots/solo.urdf'
-urdf_file = 'example-robot-data/robots/panda_description/urdf/panda.urdf'
+# urdf_file = 'example-robot-data/robots/panda_description/urdf/panda.urdf'
+urdf_file = 'example-robot-data/robots/double_pendulum_description/urdf/double_pendulum_simple.urdf'
+# urdf_file = 'example-robot-data/robots/double_pendulum_description/urdf/double_pendulum.urdf'
 
 # Set this to true if you want to add a Free-flyer joint a top or robot hierarchy 
 # (i.e. the robot has a 6-dofs free floating base)
@@ -35,6 +37,11 @@ class Robot:
         self.node = node
 
     def addRobot(self, name='RobotNode'):
+        self.node.addObject('RequiredPlugin', name='Sofa.Component.Collision.Geometry') # Needed to use components [TriangleCollisionModel]  
+        self.node.addObject('RequiredPlugin', name='Sofa.Component.Mapping.NonLinear') # Needed to use components [RigidMapping]  
+        self.node.addObject('RequiredPlugin', name='Sofa.Component.Topology.Container.Constant') # Needed to use components [MeshTopology]  
+        self.node.addObject('RequiredPlugin', name='Sofa.GL.Component.Rendering3D') # Needed to use components [OglModel]
+
         # Robot node
         robotNode = self.node.addChild(name)
         robotNode.addObject('EulerImplicitSolver')
