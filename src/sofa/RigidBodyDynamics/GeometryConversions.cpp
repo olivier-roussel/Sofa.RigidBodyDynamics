@@ -47,50 +47,70 @@ namespace
       meshTopology = sofa::core::objectmodel::New<sofa::component::topology::container::constant::MeshTopology>();
       meshTopology->setName("box");
 
-      // add box points
-      auto boxPts = std::vector<Eigen::Vector3d>();
-      boxPts.emplace_back(+boxGeom->halfSide[0], -boxGeom->halfSide[1], -boxGeom->halfSide[2]); // 0
-      boxPts.emplace_back(+boxGeom->halfSide[0], -boxGeom->halfSide[1], +boxGeom->halfSide[2]); // 1
-      boxPts.emplace_back(-boxGeom->halfSide[0], -boxGeom->halfSide[1], +boxGeom->halfSide[2]); // 2
-      boxPts.emplace_back(-boxGeom->halfSide[0], -boxGeom->halfSide[1], -boxGeom->halfSide[2]); // 3
-      boxPts.emplace_back(+boxGeom->halfSide[0], +boxGeom->halfSide[1], -boxGeom->halfSide[2]); // 4
-      boxPts.emplace_back(-boxGeom->halfSide[0], +boxGeom->halfSide[1], -boxGeom->halfSide[2]); // 5
-      boxPts.emplace_back(-boxGeom->halfSide[0], +boxGeom->halfSide[1], +boxGeom->halfSide[2]); // 6
-      boxPts.emplace_back(+boxGeom->halfSide[0], +boxGeom->halfSide[1], +boxGeom->halfSide[2]); // 7
+      // add box vertices
+      auto boxVerts = std::vector<Eigen::Vector3d>();
+      boxVerts.emplace_back(+boxGeom->halfSide[0], -boxGeom->halfSide[1], -boxGeom->halfSide[2]); // 0
+      boxVerts.emplace_back(+boxGeom->halfSide[0], -boxGeom->halfSide[1], +boxGeom->halfSide[2]); // 1
+      boxVerts.emplace_back(-boxGeom->halfSide[0], -boxGeom->halfSide[1], +boxGeom->halfSide[2]); // 2
+      boxVerts.emplace_back(-boxGeom->halfSide[0], -boxGeom->halfSide[1], -boxGeom->halfSide[2]); // 3
+      boxVerts.emplace_back(+boxGeom->halfSide[0], +boxGeom->halfSide[1], -boxGeom->halfSide[2]); // 4
+      boxVerts.emplace_back(-boxGeom->halfSide[0], +boxGeom->halfSide[1], -boxGeom->halfSide[2]); // 5
+      boxVerts.emplace_back(-boxGeom->halfSide[0], +boxGeom->halfSide[1], +boxGeom->halfSide[2]); // 6
+      boxVerts.emplace_back(+boxGeom->halfSide[0], +boxGeom->halfSide[1], +boxGeom->halfSide[2]); // 7
 
       // apply transfrom and set to mesh data
-      for(const auto& pt: boxPts)
+      for(const auto& pt: boxVerts)
       {
         const pinocchio::SE3::Vector3 ptTf = tf.act(pt).cwiseProduct(scale.cwiseAbs());
         meshTopology->addPoint(ptTf[0], ptTf[1], ptTf[2]);
       }
       // add faces
-      // meshTopology->addQuad(0, 1, 2, 3);
-      // meshTopology->addQuad(4, 5, 6, 7);
-      // meshTopology->addQuad(4, 7, 1, 0);
-      // meshTopology->addQuad(3, 2, 6, 5);
-      // meshTopology->addQuad(1, 7, 6, 2);
-      // meshTopology->addQuad(0, 3, 5, 4);
-
-      meshTopology->addTriangle(0, 1, 2);
-      meshTopology->addTriangle(0, 2, 3);
-
-      meshTopology->addTriangle(4, 5, 6);
-      meshTopology->addTriangle(4, 6, 7);
-
-      meshTopology->addTriangle(4, 7, 1);
-      meshTopology->addTriangle(4, 1, 0);
-
-      meshTopology->addTriangle(3, 2, 6);
-      meshTopology->addTriangle(3, 6, 5);
-
-      meshTopology->addTriangle(1, 7, 6);
-      meshTopology->addTriangle(1, 6, 2);
-
-      meshTopology->addTriangle(0, 3, 5);
-      meshTopology->addTriangle(0, 5, 4);
+      meshTopology->addQuad(0, 1, 2, 3);
+      meshTopology->addQuad(4, 5, 6, 7);
+      meshTopology->addQuad(4, 7, 1, 0);
+      meshTopology->addQuad(3, 2, 6, 5);
+      meshTopology->addQuad(1, 7, 6, 2);
+      meshTopology->addQuad(0, 3, 5, 4);
 
       break;
+    }
+    case hpp::fcl::GEOM_CYLINDER:
+    {
+      const auto cylGeom = std::dynamic_pointer_cast<hpp::fcl::Cylinder>(geom);
+      assert(cylGeom);
+      meshTopology = sofa::core::objectmodel::New<sofa::component::topology::container::constant::MeshTopology>();
+      meshTopology->setName("cylinder");
+
+      static const unsigned int kCylinderResolution = 8;
+      static const double kPi = 3.141592653;
+
+      for (auto i = 0; i < kCylinderResolution; ++i)
+      {
+        const double theta = (i / static_cast<double>(kCylinderResolution)) * (2 * kPi);
+        const auto x = std::cos(theta) * cylGeom->radius;
+        const auto y = std::sin(theta) * cylGeom->radius;
+        const Eigen::Vector3d bottom = Eigen::Vector3d{x, y, -cylGeom->halfLength};
+        const Eigen::Vector3d top = Eigen::Vector3d{x, y, cylGeom->halfLength};
+        const pinocchio::SE3::Vector3 bottomTf = tf.act(bottom).cwiseProduct(scale.cwiseAbs());
+        meshTopology->addPoint(bottomTf[0], bottomTf[1], bottomTf[2]);
+        const pinocchio::SE3::Vector3 topTf = tf.act(top).cwiseProduct(scale.cwiseAbs());
+        meshTopology->addPoint(topTf[0], topTf[1], topTf[2]);
+
+        // add lateral face quad
+        const auto ii = i * 2;
+        const auto jj = (ii + 2) % (kCylinderResolution * 2);
+        const auto kk = (ii + 3) % (kCylinderResolution * 2);
+        const auto ll = ii + 1;
+        meshTopology->addQuad(ii, jj, kk, ll);
+      }
+      for (auto i = 0; i < kCylinderResolution - 2; ++i)
+      {
+        // add top face
+        meshTopology->addTriangle(1, 2*(i+1)+1, 2*(i+2)+1);
+        // add bottom face
+        meshTopology->addTriangle(0, 2*(i+2), 2*(i+1));
+      }
+
     }
     default:
       // unsupported fcl geometry node type, return nullptr
