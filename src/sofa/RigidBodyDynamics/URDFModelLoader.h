@@ -44,12 +44,11 @@ namespace sofa::rigidbodydynamics
 
     void init() override;
 
-    void reinit() override;
-
     bool load() override;
 
     Data<std::string> d_modelDirectory;
     Data<bool> d_useFreeFlyerRootJoint;
+    Data<bool> d_addCollision;
     Data<sofa::type::vector<sofa::type::Vec1d>> d_q0;
 
   private:

@@ -30,8 +30,8 @@
 #include <sofa/component/mass/UniformMass.h>
 #include <sofa/component/statecontainer/MechanicalObject.h>
 #include <sofa/component/collision/geometry/TriangleModel.h>
-// #include <sofa/component/collision/geometry/LineModel.h>
-// #include <sofa/component/collision/geometry/PointModel.h>
+#include <sofa/component/collision/geometry/LineModel.h>
+#include <sofa/component/collision/geometry/PointModel.h>
 
 #include <sofa/defaulttype/RigidTypes.h>
 #include <sofa/gl/component/rendering3d/OglModel.h>
@@ -50,6 +50,7 @@ namespace sofa::rigidbodydynamics
   URDFModelLoader::URDFModelLoader() : sofa::core::loader::SceneLoader() ,
       d_modelDirectory(initData(&d_modelDirectory, "modelDirectory", "Directory containing robot models")),
       d_useFreeFlyerRootJoint(initData(&d_useFreeFlyerRootJoint, false, "useFreeFlyerRootJoint", "True if root joint is a Free Flyer joint, false if none")),
+      d_addCollision(initData(&d_addCollision, true, "addCollision", "True if collision detection must be enabled for the robot (self-collision and other objects)")),
       d_q0(initData(&d_q0, "q0", "Default configuration values of robot DoFs"))
   {
   }
@@ -72,11 +73,6 @@ namespace sofa::rigidbodydynamics
   bool URDFModelLoader::getUseFreeFlyerRootJoint()
   {
     return d_useFreeFlyerRootJoint.getValue();
-  }
-
-  void URDFModelLoader::reinit()
-  {
-    // no op
   }
 
   void URDFModelLoader::init()
@@ -307,48 +303,58 @@ namespace sofa::rigidbodydynamics
       }
 
       // add collision body node
-      const auto collisionNode = jointNode->createChild("Collision");
-      const auto collisionData = std::make_shared<pinocchio::GeometryData>(*collisionModel);
-      const auto collisionGeomIndexesIt = collisionData->innerObjects.find(jointIdx);
-      if (collisionGeomIndexesIt != collisionData->innerObjects.end())
+      if(d_addCollision.getValue() == true)
       {
-        for (const auto &geomIdx : collisionGeomIndexesIt->second)
+        const auto collisionNode = jointNode->createChild("Collision");
+        const auto collisionData = std::make_shared<pinocchio::GeometryData>(*collisionModel);
+        const auto collisionGeomIndexesIt = collisionData->innerObjects.find(jointIdx);
+        if (collisionGeomIndexesIt != collisionData->innerObjects.end())
         {
-          const auto &geom = collisionModel->geometryObjects[geomIdx];
-
-          const auto collisionBodyNode = collisionNode->createChild(geom.name);
-
-          auto collisionBodyMesh = sofa::rigidbodydynamics::fclGeometryToSofaTopology(geom.geometry, geom.placement, geom.meshScale);
-          if (not collisionBodyMesh)
+          for (const auto &geomIdx : collisionGeomIndexesIt->second)
           {
-            msg_error() << "Failed to convert pinocchio FCL collision geometry to Sofa MeshTopology";
-            msg_error() << "FCL geometry object type: " << static_cast<int>(geom.geometry->getObjectType()) << ", FCL geometry node type: " << static_cast<int>(geom.geometry->getNodeType());
-            continue;
+            const auto &geom = collisionModel->geometryObjects[geomIdx];
+
+            const auto collisionBodyNode = collisionNode->createChild(geom.name);
+
+            auto collisionBodyMesh = sofa::rigidbodydynamics::fclGeometryToSofaTopology(geom.geometry, geom.placement, geom.meshScale);
+            if (not collisionBodyMesh)
+            {
+              msg_error() << "Failed to convert pinocchio FCL collision geometry to Sofa MeshTopology";
+              msg_error() << "FCL geometry object type: " << static_cast<int>(geom.geometry->getObjectType()) << ", FCL geometry node type: " << static_cast<int>(geom.geometry->getNodeType());
+              continue;
+            }
+            collisionBodyNode->addObject(collisionBodyMesh);
+
+            auto collisionBodyObj = New<sofa::component::statecontainer::MechanicalObject<Vec3Types>>();
+            collisionBodyObj->setName("collisionMecObject");
+            // collisionBodyObj->l_topology = collisionBodyMesh;
+            collisionBodyNode->addObject(collisionBodyObj);
+
+            const auto collisionMapping = New<sofa::component::mapping::nonlinear::RigidMapping<Rigid3Types, Vec3Types>>();
+            collisionMapping->setName("collisionMapping");
+            collisionMapping->setModels(bodyRigid.get(), collisionBodyObj.get());
+            collisionBodyNode->addObject(collisionMapping);
+
+            // add collision model
+            auto collisionTriModel = New<sofa::component::collision::geometry::TriangleCollisionModel<Vec3Types>>();
+            // collisionTriModel->f_printLog.setValue(true);
+            collisionTriModel->setName("collisionTriModel");
+            collisionTriModel->l_topology = collisionBodyMesh;
+            collisionTriModel->addGroup(1);
+            collisionBodyNode->addObject(collisionTriModel);
+
+            // auto collisionLineModel = New<sofa::component::collision::geometry::LineCollisionModel<Vec3Types>>();
+            // collisionLineModel->setName("collisionLineModel");
+            // collisionLineModel->l_topology = collisionBodyMesh;
+            // collisionLineModel->addGroup(1);
+            // collisionBodyNode->addObject(collisionLineModel);
+
+            // auto collisionPointModel = New<sofa::component::collision::geometry::PointCollisionModel<Vec3Types>>();
+            // collisionPointModel->setName("collisionPointModel");
+            // // collisionPointModel->l_topology = collisionBodyMesh;
+            // collisionPointModel->addGroup(1);
+            // collisionBodyNode->addObject(collisionPointModel);
           }
-          collisionBodyNode->addObject(collisionBodyMesh);
-
-          // add collision model
-          auto collisionTriModel = New<sofa::component::collision::geometry::TriangleCollisionModel<Vec3Types>>();
-          collisionTriModel->setName("collisionTriModel");
-          collisionBodyNode->addObject(collisionTriModel);
-
-          // auto collisionLineModel = New<sofa::component::collision::geometry::LineCollisionModel<Vec3Types>>();
-          // collisionLineModel->setName("collisionLineModel");
-          // collisionBodyNode->addObject(collisionLineModel);
-
-          // auto collisionPointModel = New<sofa::component::collision::geometry::PointCollisionModel<Vec3Types>>();
-          // collisionPointModel->setName("collisionPointModel");
-          // collisionBodyNode->addObject(collisionPointModel);
-
-          auto collisionBodyObj = New<sofa::component::statecontainer::MechanicalObject<Vec3Types>>();
-          collisionBodyObj->setName("collisionMecObject");
-          // collisionBodyModel->l_topology = collisionBodyMesh;
-          collisionBodyNode->addObject(collisionBodyObj);
-
-          const auto collisionMapping = New<sofa::component::mapping::nonlinear::RigidMapping<Rigid3Types, Vec3Types>>();
-          collisionMapping->setName("collisionMapping");
-          collisionMapping->setModels(bodyRigid.get(), collisionBodyObj.get());
-          collisionBodyNode->addObject(collisionMapping);
         }
       }
     }
