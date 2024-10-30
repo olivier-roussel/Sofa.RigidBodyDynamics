@@ -12,6 +12,7 @@ find_package(Sofa.GL.Component.Rendering3D REQUIRED)
 set(SOFA_RBD_SRC_DIR src/sofa/RigidBodyDynamics)
 set(HEADER_FILES
     ${SOFA_RBD_SRC_DIR}/config.h.in
+    ${SOFA_RBD_SRC_DIR}/BaseShapesConversions.h
     ${SOFA_RBD_SRC_DIR}/Conversions.h
     ${SOFA_RBD_SRC_DIR}/GeometryConversions.h
     ${SOFA_RBD_SRC_DIR}/KinematicChainMapping.h
@@ -22,6 +23,7 @@ set(HEADER_FILES_TO_MOC
     )
 set(SOURCE_FILES
     ${SOFA_RBD_SRC_DIR}/init.cpp
+    ${SOFA_RBD_SRC_DIR}/BaseShapesConversions.cpp
     ${SOFA_RBD_SRC_DIR}/GeometryConversions.cpp
     ${SOFA_RBD_SRC_DIR}/KinematicChainMapping.cpp
     ${SOFA_RBD_SRC_DIR}/URDFModelLoader.cpp
