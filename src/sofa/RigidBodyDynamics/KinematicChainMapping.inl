@@ -355,10 +355,10 @@ namespace sofa::component::mapping::nonlinear
     // msg_info() << " frames placements updated";
 
     // Single output vector of size njoints
-    for (auto bodyIdx = 0ul; bodyIdx < m_model->nbodies; ++bodyIdx)
+    for (auto jointIdx = 0ul; jointIdx < m_model->njoints; ++jointIdx)
     {
-      const auto &frameIdx = m_bodyCoMFrames[bodyIdx];
-      _out[bodyIdx] = sofa::rigidbodydynamics::se3ToSofaType(m_data->oMf[frameIdx]);
+      const auto &frameIdx = m_bodyCoMFrames[jointIdx];
+      _out[jointIdx] = sofa::rigidbodydynamics::se3ToSofaType(m_data->oMf[frameIdx]);
     }
   }
 
@@ -397,13 +397,13 @@ namespace sofa::component::mapping::nonlinear
     // Single output vector of size njoints
     assert(_out.size() == m_model->njoints);
 
-    for (auto bodyIdx = 0ul; bodyIdx < m_model->nbodies; ++bodyIdx)
+    for (auto jointIdx = 0ul; jointIdx < m_model->njoints; ++jointIdx)
     {
       pinocchio::Data::Matrix6x J = pinocchio::Data::Matrix6x::Zero(6, m_model->nv);
-      const auto &frameIdx = m_bodyCoMFrames[bodyIdx];
+      const auto &frameIdx = m_bodyCoMFrames[jointIdx];
       pinocchio::getFrameJacobian(*m_model, *m_data, frameIdx, pinocchio::LOCAL_WORLD_ALIGNED, J);
       Eigen::VectorXd dg = J * dq;
-      _out[bodyIdx] = sofa::rigidbodydynamics::vec6ToSofaType<Eigen::VectorXd>(dg);
+      _out[jointIdx] = sofa::rigidbodydynamics::vec6ToSofaType<Eigen::VectorXd>(dg);
     }
   }
 
@@ -427,16 +427,16 @@ namespace sofa::component::mapping::nonlinear
     // size = nv if no root joint, nv+6 if using free-flyer root joint
     helper::WriteAccessor<DataVecDeriv_t<In>> _out(out);
     // in is a vector of spatial forces for each body
-    // size = nbodies
+    // size = njoints
     helper::ReadAccessor<DataVecDeriv_t<Out>> _in(in);
 
     Eigen::VectorXd jointsTorques = Eigen::VectorXd::Zero(m_model->nv);
-    for (auto bodyIdx = 0ul; bodyIdx < m_model->nbodies; ++bodyIdx)
+    for (auto jointIdx = 0ul; jointIdx < m_model->njoints; ++jointIdx)
     {
       // bodyForce is a spatial force so 6-vector
-      const Eigen::VectorXd bodyForce = sofa::rigidbodydynamics::vectorToEigen(_in[bodyIdx], 6);
+      const Eigen::VectorXd bodyForce = sofa::rigidbodydynamics::vectorToEigen(_in[jointIdx], 6);
       pinocchio::Data::Matrix6x J = pinocchio::Data::Matrix6x::Zero(6, m_model->nv);
-      const auto &frameIdx = m_bodyCoMFrames[bodyIdx];
+      const auto &frameIdx = m_bodyCoMFrames[jointIdx];
 
       pinocchio::getFrameJacobian(*m_model, *m_data, frameIdx, pinocchio::LOCAL_WORLD_ALIGNED, J);
       jointsTorques += J.transpose() * bodyForce;
@@ -490,8 +490,8 @@ namespace sofa::component::mapping::nonlinear
       for (auto colIt = rowIt.begin(); colIt != rowIt.end(); ++colIt)
       {
         // retrieve body frame index (centered at CoM) for each body
-        const auto bodyIdx = colIt.index();
-        const auto &frameIdx = m_bodyCoMFrames[bodyIdx];
+        const auto jointIdx = colIt.index();
+        const auto &frameIdx = m_bodyCoMFrames[jointIdx];
 
         // get jacobian associated to this body
         pinocchio::Data::Matrix6x J = pinocchio::Data::Matrix6x::Zero(6, m_model->nv);

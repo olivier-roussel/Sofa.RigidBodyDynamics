@@ -21,6 +21,7 @@
  ******************************************************************************/
 #include <sofa/RigidBodyDynamics/URDFModelLoader.h>
 
+#include <sofa/RigidBodyDynamics/CollisionPair.h>
 #include <sofa/RigidBodyDynamics/Conversions.h>
 #include <sofa/RigidBodyDynamics/GeometryConversions.h>
 #include <sofa/RigidBodyDynamics/KinematicChainMapping.h>
@@ -151,11 +152,11 @@ namespace sofa::rigidbodydynamics
       // msg_info() << "Built robot visual model from URDF file: " << urdf_filename;
 
       // add a frame for each body centered on its CoM and that will be used as body DoF by SOFA
-      bodyCoMFrames.reserve(model->nbodies);
-      for (pinocchio::JointIndex bodyIdx = 0; bodyIdx < model->nbodies; ++bodyIdx)
+      bodyCoMFrames.reserve(model->njoints);
+      for (pinocchio::JointIndex jointIdx = 0; jointIdx < model->njoints; ++jointIdx)
       {
-        const pinocchio::SE3 bodyCoM_i = pinocchio::SE3(Eigen::Matrix3d::Identity(), model->inertias[bodyIdx].lever());
-        const auto bodyFrameCoM = pinocchio::Frame{"Body_" + std::to_string(bodyIdx) + "_CoM", bodyIdx, bodyCoM_i, pinocchio::FrameType::OP_FRAME};
+        const pinocchio::SE3 bodyCoM_i = pinocchio::SE3(Eigen::Matrix3d::Identity(), model->inertias[jointIdx].lever());
+        const auto bodyFrameCoM = pinocchio::Frame{"Body_" + std::to_string(jointIdx) + "_CoM", jointIdx, bodyCoM_i, pinocchio::FrameType::OP_FRAME};
         bodyCoMFrames.push_back(model->addFrame(bodyFrameCoM));
       }
     }
@@ -198,7 +199,7 @@ namespace sofa::rigidbodydynamics
     // one dof container for all bodies version
     const auto bodiesDof = New<MechanicalObjectRigid3>();
     bodiesDof->setName("bodiesDofs");
-    bodiesDof->resize(model->nbodies);
+    bodiesDof->resize(model->njoints);
     bodiesNode->addObject(bodiesDof);
 
     kinematicChainMapping->addOutputModel(bodiesDof.get());
@@ -286,7 +287,7 @@ namespace sofa::rigidbodydynamics
 
           // add visual openGL model
           auto visualBodyModel = New<sofa::gl::component::rendering3d::OglModel>();
-          visualBodyModel->f_printLog = true;
+          // visualBodyModel->f_printLog = true;
           visualBodyModel->setName("visualModel");
           visualBodyModel->l_topology = visualBodyMesh;
           visualBodyModel->setColor(geom.meshColor[0], geom.meshColor[1], geom.meshColor[2], geom.meshColor[3]);
