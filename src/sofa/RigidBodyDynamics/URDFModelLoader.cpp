@@ -52,7 +52,8 @@ namespace sofa::rigidbodydynamics
       d_modelDirectory(initData(&d_modelDirectory, "modelDirectory", "Directory containing robot models")),
       d_useFreeFlyerRootJoint(initData(&d_useFreeFlyerRootJoint, false, "useFreeFlyerRootJoint", "True if root joint is a Free Flyer joint, false if none")),
       d_addCollision(initData(&d_addCollision, true, "addCollision", "True if collision detection must be enabled for the robot (self-collision and other objects)")),
-      d_q0(initData(&d_q0, "q0", "Default configuration values of robot DoFs"))
+      d_qRest(initData(&d_qRest, "qRest", "Rest configuration values of robot DoFs")),
+      d_qInit(initData(&d_qInit, "qInit", "Initial configuration values of robot DoFs"))
   {
   }
 
@@ -175,13 +176,10 @@ namespace sofa::rigidbodydynamics
     auto nqWithoutRootJoint = useFreeFlyerRootJoint ? model->nq - 7 : model->nq;
     msg_info() << "nqWithoutRootJoint = " << nqWithoutRootJoint;
     jointsDofs->resize(nqWithoutRootJoint);
-    // set desired position specified from \"q0\" data field
-    sofa::type::Vec1d defaultDofValue;
-    // TODO retrieve default configs q0 from SRDF file if any
-    defaultDofValue.set(0.);
-    sofa::type::vector<sofa::type::Vec1d> q0Values(nqWithoutRootJoint, defaultDofValue);
-    d_q0.setValue(q0Values);
-    jointsDofs->x0.setParent(&d_q0);
+    // set initial position specified from \"qInit\" data field
+    jointsDofs->x.setParent(&d_qInit);
+    // set rest position specified from \"qRest\" data field
+    jointsDofs->x0.setParent(&d_qRest);
     jointsNode->addObject(jointsDofs);
 
     const auto bodiesNode = jointsNode->createChild("Bodies");

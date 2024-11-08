@@ -49,7 +49,8 @@ namespace sofa::rigidbodydynamics
     Data<std::string> d_modelDirectory;
     Data<bool> d_useFreeFlyerRootJoint;
     Data<bool> d_addCollision;
-    Data<sofa::type::vector<sofa::type::Vec1d>> d_q0;
+    Data<sofa::type::vector<sofa::type::Vec1d>> d_qRest;
+    Data<sofa::type::vector<sofa::type::Vec1d>> d_qInit;
 
   private:
     URDFModelLoader();
