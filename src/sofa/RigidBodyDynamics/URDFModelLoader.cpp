@@ -45,8 +45,32 @@ using namespace sofa::defaulttype;
 using MechanicalObjectVec1 = sofa::component::statecontainer::MechanicalObject<Vec1Types>;
 using MechanicalObjectRigid3 = sofa::component::statecontainer::MechanicalObject<Rigid3Types>;
 
+
 namespace sofa::rigidbodydynamics
 {
+  namespace
+  {
+    // TODO must be read from SRDF file or init by API, just for debugging
+    using CollisionPairSet = std::set<CollisionPair, CollisionPairComparator>;
+
+    CollisionPairSet
+    initCollisionPairs()
+    {
+      CollisionPairSet out;
+      out.insert(CollisionPair{out.size()+1, "panda_hand", "panda_leftfinger", NoCollisionReason::ADJACENT});
+      out.insert(CollisionPair{out.size()+1, "panda_hand", "panda_link7", NoCollisionReason::ADJACENT});
+      out.insert(CollisionPair{out.size()+1, "panda_hand", "panda_rightfinger", NoCollisionReason::ADJACENT});
+      out.insert(CollisionPair{out.size()+1, "panda_link0", "panda_link1", NoCollisionReason::ADJACENT});
+      out.insert(CollisionPair{out.size()+1, "panda_link1", "panda_link2", NoCollisionReason::ADJACENT});
+      out.insert(CollisionPair{out.size()+1, "panda_link2", "panda_link3", NoCollisionReason::ADJACENT});
+      out.insert(CollisionPair{out.size()+1, "panda_link3", "panda_link4", NoCollisionReason::ADJACENT});
+      out.insert(CollisionPair{out.size()+1, "panda_link4", "panda_link5", NoCollisionReason::ADJACENT});
+      out.insert(CollisionPair{out.size()+1, "panda_link5", "panda_link6", NoCollisionReason::ADJACENT});
+      out.insert(CollisionPair{out.size()+1, "panda_link6", "panda_link7", NoCollisionReason::ADJACENT});
+
+      return out;
+    }
+  }
 
   URDFModelLoader::URDFModelLoader() : sofa::core::loader::SceneLoader() ,
       d_modelDirectory(initData(&d_modelDirectory, "modelDirectory", "Directory containing robot models")),
@@ -143,6 +167,11 @@ namespace sofa::rigidbodydynamics
         msg_info() << "Joint[" << jointIdx << "]: " << model->names[jointIdx] << " / " << model->joints[jointIdx];
       }
 
+      for(auto frameIdx = 0u; frameIdx < model->nframes; ++frameIdx)
+      {
+        msg_info() << "Frame[" << frameIdx << "]: " << model->frames[frameIdx].name;
+      }
+
       // TODO use collisionModel to create collision nodes in SOFA
       collisionModel = std::make_shared<pinocchio::GeometryModel>();
       pinocchio::urdf::buildGeom(*model, urdfFilename, pinocchio::COLLISION, *collisionModel, modelDir);
@@ -167,6 +196,9 @@ namespace sofa::rigidbodydynamics
       d_componentState.setValue(sofa::core::objectmodel::ComponentState::Invalid);
       return false;
     }
+
+    // TODO try to load SRDF data ?
+    const auto collisionPairs = initCollisionPairs();
 
     // create robot scene tree
     const auto jointsNode = context->createChild("Joints");
@@ -339,8 +371,29 @@ namespace sofa::rigidbodydynamics
             // collisionTriModel->f_printLog.setValue(true);
             collisionTriModel->setName("collisionTriModel");
             collisionTriModel->l_topology = collisionBodyMesh;
-            collisionTriModel->addGroup(1);
+            // collisionTriModel->addGroup(1);
             collisionBodyNode->addObject(collisionTriModel);
+
+            // get associated collision groups if any, to disable some collision pairs
+
+            // find back supporting link name
+            // msg_info() << "===== jointIdx: " << jointIdx << " / joint name: " << model->names[jointIdx] << " / geom name: " << geom.name;
+            // unsigned int numFrames = 0;
+            // for(auto j = 0; j < model->frames.size(); ++j)
+            // {
+            //   const auto& frame = model->frames[j];
+            //   if(frame.type == pinocchio::FrameType::BODY)
+            //   {
+            //     if(frame.parent == jointIdx)
+            //     {
+            //       msg_info() << " --> frame " << frame.name << " has parent joint id: " << jointIdx;
+            //       ++numFrames;
+            //     }
+            //   }
+            // }
+            // msg_info() << " --> num links Frames  = " << numFrames;
+
+            // if(collisionPairs.find())
 
             // auto collisionLineModel = New<sofa::component::collision::geometry::LineCollisionModel<Vec3Types>>();
             // collisionLineModel->setName("collisionLineModel");

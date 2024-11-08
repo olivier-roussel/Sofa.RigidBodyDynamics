@@ -13,6 +13,7 @@ set(SOFA_RBD_SRC_DIR src/sofa/RigidBodyDynamics)
 set(HEADER_FILES
     ${SOFA_RBD_SRC_DIR}/config.h.in
     ${SOFA_RBD_SRC_DIR}/BaseShapesConversions.h
+    ${SOFA_RBD_SRC_DIR}/CollisionPair.h
     ${SOFA_RBD_SRC_DIR}/Conversions.h
     ${SOFA_RBD_SRC_DIR}/GeometryConversions.h
     ${SOFA_RBD_SRC_DIR}/KinematicChainMapping.h
