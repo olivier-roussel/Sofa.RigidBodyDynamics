@@ -348,11 +348,16 @@ namespace sofa::component::mapping::nonlinear
     // Computes joints Jacobians and forward kinematics. Jacobians will
     // be used by applyJ and not apply function, but this is done here
     // to avoid duplicate computation of forward kinematics
+
+    // Note that as mentionned in pinocchio documentation, calling computeJointJacobians(model,data,q), 
+    // then updateFramePlacements(model,data) and then call getJointJacobian(model,data,jointId,rf,J),
+    // as done here, is equivalent to call computeFrameJacobian(model,data,jointId,rf,J), but here
+    // forwardKinematics and updateFramePlacements are fully computed.
     pinocchio::computeJointJacobians(*m_model, *m_data, q);
     // msg_info() << " fwd kinematics & joint jacobians computed";
-
     pinocchio::updateFramePlacements(*m_model, *m_data);
     // msg_info() << " frames placements updated";
+
 
     // Single output vector of size njoints
     for (auto jointIdx = 0ul; jointIdx < m_model->njoints; ++jointIdx)
