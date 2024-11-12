@@ -1,12 +1,15 @@
 import sys
 import os
 import numpy as np
-import pinocchio
+import pinocchio  # TODO get rid of this
 
-# urdf_file = 'example-robot-data/robots/ur_description/urdf/ur10_robot.urdf'
+# urdf_file = 'schunk_svh_hand_right.urdf'
+
+urdf_file = 'example-robot-data/robots/ur_description/urdf/ur10_robot.urdf'
 # urdf_file = 'example-robot-data/robots/talos_data/robots/talos_reduced_corrected.urdf'
 # urdf_file = 'example-robot-data/robots/solo_description/robots/solo.urdf'
-urdf_file = 'example-robot-data/robots/anymal_c_simple_description/urdf/anymal.urdf'
+# urdf_file = 'example-robot-data/robots/anymal_c_simple_description/urdf/anymal.urdf'
+# urdf_file = 'example-robot-data/robots/romeo_description/urdf/romeo.urdf'
 # urdf_file = 'example-robot-data/robots/panda_description/urdf/panda.urdf'
 # urdf_file = 'example-robot-data/robots/double_pendulum_description/urdf/double_pendulum_simple.urdf'
 # urdf_file = 'example-robot-data/robots/double_pendulum_description/urdf/double_pendulum.urdf'
@@ -39,29 +42,29 @@ class Robot:
 
     def addRobot(self, name='RobotNode'):
         # Robot node
-        robotNode = self.node.addChild(name)
-        robotNode.addObject('EulerImplicitSolver')
-        # robotNode.addObject('CGLinearSolver', name='Solver', iterations=200)
-        robotNode.addObject('SparseLDLSolver', template="CompressedRowSparseMatrixMat3x3d")
-        robotNode.addObject('GenericConstraintCorrection')
-        urdfLoader = robotNode.addObject('URDFModelLoader', name='URDFModelLoader', filename=urdf_full_filename, modelDirectory=model_path, useFreeFlyerRootJoint=useFFRootJoint, printLog=True)
+        robotWrapperNode = self.node.addChild(name)
+        robotWrapperNode.addObject('EulerImplicitSolver')
+        # robotWrapperNode.addObject('CGLinearSolver', name='Solver', iterations=200)
+        robotWrapperNode.addObject('SparseLDLSolver', template="CompressedRowSparseMatrixMat3x3d")
+        robotWrapperNode.addObject('GenericConstraintCorrection')
+        urdfLoader = robotWrapperNode.addObject('URDFModelLoader', name='URDFModelLoader', filename=urdf_full_filename, modelDirectory=model_path, useFreeFlyerRootJoint=useFFRootJoint, printLog=True)
 
-        jointsNode = robotNode.getChild('Joints')
-        dofs = jointsNode.getObject('dofs')
+        robotNode = robotWrapperNode.getChild('Robot')
+        dofs = robotNode.getObject('dofs')
         nqWithoutRootJoint = dofs.size.value
         # Beware that configuration space number of parameters != configuration space dimension
         # and its tangent space may have a different number of parameters
         print('Robot configuration space number of parameters (without Free-flyer root joint if any) = ', nqWithoutRootJoint)
 
         # Add a spring force field to its rest configuration
-        jointsNode.addObject('RestShapeSpringsForceField', stiffness=1e3, points=list(range(nqWithoutRootJoint)))
+        robotNode.addObject('RestShapeSpringsForceField', stiffness=1e3, points=list(range(nqWithoutRootJoint)))
 
         # Also add a spring force field to root Free-flyer joint rest configuration, if any
         if useFFRootJoint:
-          rootJointNode = robotNode.getChild('RootJoint')
+          rootJointNode = robotWrapperNode.getChild('RootJoint')
           rootJointNode.addObject('RestShapeSpringsForceField', stiffness=1e3, angularStiffness=1e3, points=[0])
 
-        return robotNode
+        return robotWrapperNode
 
 
 # Test/example scene
@@ -107,9 +110,9 @@ def createScene(rootNode):
 
     # Robot
     robot = Robot(rootNode)
-    robotNode = robot.addRobot()
+    robotWrapperNode = robot.addRobot()
 
     # RobotGUI can be used to set interactively robot rest configuration
-    robotNode.addObject(RobotGUI(robot = robotNode))
+    robotWrapperNode.addObject(RobotGUI(robot = robotWrapperNode))
 
     return
