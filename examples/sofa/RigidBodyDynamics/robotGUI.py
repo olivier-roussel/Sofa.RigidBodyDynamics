@@ -9,16 +9,17 @@ from math import pi
 
 class App(threading.Thread):
 
-    def __init__(self, q0):
+    def __init__(self, qRest):
         threading.Thread.__init__(self)
         self.daemon = True
         self.start()
 
-        self.q0Init = q0
+        print("============ qRest size : ", len(qRest))
+        self.qRest = qRest
 
     def reset(self):
-        for i in range(0, len(self.q0Init)):
-          self.q[i].set(self.q0Init[i])
+        for i in range(0, len(self.qRest)):
+          self.q[i].set(self.qRest[i])
 
     def callback(self):
         self.root.quit()
@@ -31,7 +32,7 @@ class App(threading.Thread):
         self.root.protocol("WM_DELETE_WINDOW", self.callback)
 
         self.q = []
-        for i in range(0, len(self.q0Init)):
+        for i in range(0, len(self.qRest)):
           self.q.append(tkinter.DoubleVar())
 
         self.qLabels = []
@@ -56,9 +57,9 @@ class RobotGUI(Sofa.Core.Controller):
     def init(self):
         # XXX: find a way to use link path to q0 data instead
         urdfLoader = self.robotNode.getObject('URDFModelLoader')
-        q0 = urdfLoader.getData('q0').value
+        qRest = urdfLoader.getData('qRest').value
 
-        self.app = App(q0)
+        self.app = App(qRest)
 
 
     def reset(self):
@@ -70,10 +71,10 @@ class RobotGUI(Sofa.Core.Controller):
 
         # XXX: find a way to use link path to q0 data instead
         urdfLoader = self.robotNode.getObject('URDFModelLoader')
-        q0Data = urdfLoader.getData('q0')
-        with q0Data.writeableArray() as q0DataValue:
-          for i in range(0, len(q0DataValue)):
-            q0DataValue[i] = self.app.q[i].get()
+        qRestData = urdfLoader.getData('qRest')
+        with qRestData.writeableArray() as qRestDataValue:
+          for i in range(0, len(qRestDataValue)):
+            qRestDataValue[i] = self.app.q[i].get()
 
         return
 

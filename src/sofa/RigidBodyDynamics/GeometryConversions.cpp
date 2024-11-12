@@ -101,6 +101,7 @@ namespace sofa::rigidbodydynamics
     {
       const auto bvhGeom = std::dynamic_pointer_cast<hpp::fcl::BVHModelBase>(geom);
       assert(bvhGeom);
+
       meshTopology = sofa::core::objectmodel::New<sofa::component::topology::container::constant::MeshTopology>();
       meshTopology->setName("mesh");
       if (bvhGeom->getModelType() == hpp::fcl::BVH_MODEL_TRIANGLES)

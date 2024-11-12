@@ -89,6 +89,8 @@ namespace sofa::component::mapping::nonlinear
 
     void setBodyCoMFrames(const std::vector<pinocchio::FrameIndex>& bodyCoMFrames);
 
+    // TODO accessors if OK
+    std::vector<pinocchio::FrameIndex> m_extraFrames;
   protected:
     KinematicChainMapping();
     ~KinematicChainMapping() override
@@ -108,13 +110,19 @@ namespace sofa::component::mapping::nonlinear
     void checkIndexFromRoot();
 
     void apply(const core::MechanicalParams* mparams,
-      DataVecCoord_t<Out>& out,
+      // DataVecCoord_t<Out>& out_joints,
+      // DataVecCoord_t<Out>& out_frames,
+      VecCoord_t<Out>& _out_joints,
+      VecCoord_t<Out>& _out_frames,
       const DataVecCoord_t<In>& in,
       const DataVecCoord_t<InRoot>* inRoot);
 
     void applyJ(
       const core::MechanicalParams* mparams,
-      DataVecDeriv_t<Out>& out,
+      // DataVecDeriv_t<Out>& out_joints,
+      // DataVecDeriv_t<Out>& out_frames,
+      VecDeriv_t<Out>& _out_joints,
+      VecDeriv_t<Out>& _out_frames,
       const DataVecDeriv_t<In>& in,
       const DataVecDeriv_t<InRoot>* inRoot);
 
@@ -122,13 +130,14 @@ namespace sofa::component::mapping::nonlinear
       const core::MechanicalParams *mparams,
       DataVecDeriv_t<In>& out,
       DataVecDeriv_t<InRoot>* outRoot,
-      const DataVecDeriv_t<Out>& in);
+      const VecDeriv_t<Out>& in_joints);
+      // const DataVecDeriv_t<Out>& in_joints);
 
     void applyJT(
       const core::ConstraintParams *mparams,
       DataMatrixDeriv_t<In>& out,
       DataMatrixDeriv_t<InRoot>* outRoot,
-      const DataMatrixDeriv_t<Out>& in);
+      const DataMatrixDeriv_t<Out>& in_joints);
   };
 
 #if !defined(SOFA_COMPONENT_MAPPING_KINEMATICCHAINMAPPING_CPP)

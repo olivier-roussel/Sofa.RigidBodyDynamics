@@ -54,6 +54,7 @@ namespace sofa::rigidbodydynamics
       d_addCollision(initData(&d_addCollision, true, "addCollision", "True if collision detection must be enabled for the robot (self-collision and other objects)")),
       d_qRest(initData(&d_qRest, "qRest", "Rest configuration values of robot DoFs")),
       d_qInit(initData(&d_qInit, "qInit", "Initial configuration values of robot DoFs"))
+      // d_extraFramesNames(initData(&d_extraFramesNames, "extraFramesNames", "Optional frames names to add to kinematic mapping"))
   {
   }
 
@@ -94,6 +95,7 @@ namespace sofa::rigidbodydynamics
     std::shared_ptr<pinocchio::GeometryModel> collisionModel;
     std::shared_ptr<pinocchio::GeometryModel> visualModel;
     std::vector<pinocchio::FrameIndex> bodyCoMFrames;
+    std::vector<pinocchio::FrameIndex> extraFrames;
 
     simulation::Node *context = dynamic_cast<simulation::Node *>(this->getContext()); // access to current node
 
@@ -142,10 +144,13 @@ namespace sofa::rigidbodydynamics
       {
         msg_info() << "Joint[" << jointIdx << "]: " << model->names[jointIdx] << " / " << model->joints[jointIdx];
       }
-      for(auto frameIdx = 0u; frameIdx < model->nframes; ++frameIdx)
-      {
-        msg_info() << "Frame[" << frameIdx << "]: " << model->frames[frameIdx].name <<" / parent Joint = " << model->frames[frameIdx].parentJoint << " / parent Frame = " << model->frames[frameIdx].parentFrame; 
-      }
+
+      // msg_info() << "Adding all frames to kinematic mapping...";
+      // for(auto frameIdx = 0u; frameIdx < model->nframes; ++frameIdx)
+      // {
+      //   msg_info() << "Frame[" << frameIdx << "]: " << model->frames[frameIdx].name <<" / parent Joint = " << model->frames[frameIdx].parentJoint << " / parent Frame = " << model->frames[frameIdx].parentFrame;
+      //   extraFrames.push_back(frameIdx);
+      // }
 
       // TODO use collisionModel to create collision nodes in SOFA
       collisionModel = std::make_shared<pinocchio::GeometryModel>();
@@ -179,6 +184,23 @@ namespace sofa::rigidbodydynamics
     jointsDofs->setName("dofs");
     auto nqWithoutRootJoint = useFreeFlyerRootJoint ? model->nq - 7 : model->nq;
     msg_info() << "nqWithoutRootJoint = " << nqWithoutRootJoint;
+
+    msg_info() << "=========== d_qInit isSet = " << d_qInit.isSet();
+    msg_info() << "=========== d_qRest isSet = " << d_qRest.isSet();
+    if(not d_qInit.isSet())
+    {
+      sofa::type::Vec1d defaultDofValue;
+      defaultDofValue.set(0.);
+      sofa::type::vector<sofa::type::Vec1d> q0Values(nqWithoutRootJoint, defaultDofValue);
+      d_qInit.setValue(q0Values);
+    }
+    if(not d_qRest.isSet())
+    {
+      sofa::type::Vec1d defaultDofValue;
+      defaultDofValue.set(0.);
+      sofa::type::vector<sofa::type::Vec1d> q0Values(nqWithoutRootJoint, defaultDofValue);
+      d_qRest.setValue(q0Values);
+    }
     jointsDofs->resize(nqWithoutRootJoint);
     // set initial position specified from \"qInit\" data field
     jointsDofs->x.setParent(&d_qInit);
@@ -192,19 +214,27 @@ namespace sofa::rigidbodydynamics
     const auto kinematicChainMapping = New<sofa::component::mapping::nonlinear::KinematicChainMapping<Vec1Types, Rigid3Types, Rigid3Types>>();
     kinematicChainMapping->setName("kinematicChainMapping");
     kinematicChainMapping->setBodyCoMFrames(bodyCoMFrames);
+    kinematicChainMapping->m_extraFrames = extraFrames;
     kinematicChainMapping->f_printLog.setValue(true);
     kinematicChainMapping->setModel(model);
 
     // set mapping input1
     kinematicChainMapping->addInputModel1(jointsDofs.get());
 
-    // one dof container for all bodies version
+    // set mapping output
+    // one dof container for all joints
     const auto jointsDof = New<MechanicalObjectRigid3>();
     jointsDof->setName("jointsDof");
-    jointsDof->resize(model->njoints);
+    jointsDof->resize(model->njoints + extraFrames.size());
     jointsNode->addObject(jointsDof);
+    kinematicChainMapping->addOutputModel(jointsDof.get(), jointsDof->getPathName());
+    // // one dof container for all extra frames
+    // const auto framesDof = New<MechanicalObjectRigid3>();
+    // framesDof->setName("framesDof");
+    // framesDof->resize(extraFrames.size());
+    // jointsNode->addObject(framesDof);
+    // kinematicChainMapping->addOutputModel(framesDof.get(), framesDof->getPathName());
 
-    kinematicChainMapping->addOutputModel(jointsDof.get());
     jointsNode->addObject(kinematicChainMapping);
 
     // set mapping input2: free flyer root joint if any specified
