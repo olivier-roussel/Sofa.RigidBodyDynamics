@@ -87,8 +87,8 @@ namespace sofa::rigidbodydynamics
   {
     Eigen::Matrix<Scalar, 6, 1> out;
     const auto& v = in_vel.getVCenter();
-    const auto& q = in_vel.getVOrientation();
-    out << v.x(), v.y(), v.z(), q[0], q[1], q[2], q[3];
+    const auto& vrot = in_vel.getVOrientation();
+    out << v.x(), v.y(), v.z(), vrot.x(), vrot.y(), vrot.z();
     return out;
   }
 
