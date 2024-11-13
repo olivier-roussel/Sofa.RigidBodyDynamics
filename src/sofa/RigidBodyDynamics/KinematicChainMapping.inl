@@ -291,7 +291,6 @@ namespace sofa::component::mapping::nonlinear
   template <class TIn, class TInRoot, class TOut>
   void KinematicChainMapping<TIn, TInRoot, TOut>::setBodyCoMFrames(const std::vector<pinocchio::FrameIndex> &bodyCoMFrames)
   {
-    assert(bodyCoMFrames);
     m_bodyCoMFrames = bodyCoMFrames;
   }
 

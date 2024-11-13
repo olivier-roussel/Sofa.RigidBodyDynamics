@@ -146,7 +146,7 @@ namespace sofa::rigidbodydynamics
       const Eigen::Vector3d bottom = Eigen::Vector3d{0., 0., -geom->radius};
       addTransformedPointToMesh(bottom, meshTopology, tf, scale);
       const auto numVerts = (numStacks - 1) * numSlices + 2;
-      assert(numVerts == meshTolopogy->getNbPoints());
+      assert(numVerts == meshTopology->getNbPoints());
 
       // add triangles for first (z+) / last (z-) stack
       for (auto i = 0; i < numSlices; ++i)
