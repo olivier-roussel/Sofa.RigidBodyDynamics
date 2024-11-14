@@ -109,35 +109,53 @@ namespace sofa::component::mapping::nonlinear
 
     void checkIndexFromRoot();
 
-    void apply(const core::MechanicalParams* mparams,
-      // DataVecCoord_t<Out>& out_joints,
-      // DataVecCoord_t<Out>& out_frames,
-      VecCoord_t<Out>& _out_joints,
-      VecCoord_t<Out>& _out_frames,
-      const DataVecCoord_t<In>& in,
-      const DataVecCoord_t<InRoot>* inRoot);
+    // void apply(const core::MechanicalParams* mparams,
+    //   // DataVecCoord_t<Out>& out_joints,
+    //   // DataVecCoord_t<Out>& out_frames,
+    //   VecCoord_t<Out>& _out_joints,
+    //   VecCoord_t<Out>& _out_frames,
+    //   const DataVecCoord_t<In>& in,
+    //   const DataVecCoord_t<InRoot>* inRoot);
 
-    void applyJ(
-      const core::MechanicalParams* mparams,
-      // DataVecDeriv_t<Out>& out_joints,
-      // DataVecDeriv_t<Out>& out_frames,
-      VecDeriv_t<Out>& _out_joints,
-      VecDeriv_t<Out>& _out_frames,
-      const DataVecDeriv_t<In>& in,
-      const DataVecDeriv_t<InRoot>* inRoot);
+    // void applyJ(
+    //   const core::MechanicalParams* mparams,
+    //   DataVecDeriv_t<Out>& out_joints,
+    //   DataVecDeriv_t<Out>& out_frames,
+    //   // VecDeriv_t<Out>& _out_joints,
+    //   // VecDeriv_t<Out>& _out_frames,
+    //   const DataVecDeriv_t<In>& in,
+    //   const DataVecDeriv_t<InRoot>* inRoot);
 
-    void applyJT(
-      const core::MechanicalParams *mparams,
-      DataVecDeriv_t<In>& out,
-      DataVecDeriv_t<InRoot>* outRoot,
-      const VecDeriv_t<Out>& in_joints);
-      // const DataVecDeriv_t<Out>& in_joints);
+public:
+    virtual void apply(VecCoord_t<Out>* out,
+                       const VecCoord_t<In>* in,
+                       const VecCoord_t<InRoot>* inRoot);
 
-    void applyJT(
-      const core::ConstraintParams *mparams,
-      DataMatrixDeriv_t<In>& out,
-      DataMatrixDeriv_t<InRoot>* outRoot,
-      const DataMatrixDeriv_t<Out>& in_joints);
+    virtual void applyJ(VecDeriv_t<Out>* out,
+                        const VecDeriv_t<In>* in,
+                        const VecDeriv_t<InRoot>* inRoot);
+
+    virtual void applyJT(VecDeriv_t<In>* out,
+                         VecDeriv_t<InRoot>* outRoot,
+                         const VecDeriv_t<Out>* in);
+
+    virtual void applyJT(MatrixDeriv_t<In>* out,
+                         MatrixDeriv_t<InRoot>* outRoot,
+                         const MatrixDeriv_t<Out>* in);
+
+// private:
+//     void applyJT(
+//       const core::MechanicalParams *mparams,
+//       DataVecDeriv_t<In>& out,
+//       DataVecDeriv_t<InRoot>* outRoot,
+//       const VecDeriv_t<Out>& in_joints);
+//       // const DataVecDeriv_t<Out>& in_joints);
+
+//     void applyJT(
+//       const core::ConstraintParams *mparams,
+//       DataMatrixDeriv_t<In>& out,
+//       DataMatrixDeriv_t<InRoot>* outRoot,
+//       const DataMatrixDeriv_t<Out>& in_joints);
   };
 
 #if !defined(SOFA_COMPONENT_MAPPING_KINEMATICCHAINMAPPING_CPP)

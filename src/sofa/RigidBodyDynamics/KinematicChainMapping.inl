@@ -108,22 +108,19 @@ namespace sofa::component::mapping::nonlinear
       const type::vector<const DataVecCoord_t<In> *> &dataVecInPos,
       const type::vector<const DataVecCoord_t<InRoot> *> &dataVecInRootPos)
   {
+    SOFA_UNUSED(mparams);
+
     if (d_componentState.getValue() == sofa::core::objectmodel::ComponentState::Invalid)
       return;
 
     if (dataVecOutPos.empty() or dataVecInPos.empty())
       return;
 
-    if (dataVecOutPos.size() != 1)
+    if (dataVecOutPos.size() > 1)
     {
-      msg_error() << "KinematicChainMapping only supports output vector of size 2 (one element for joints, one element for frames)";
+      msg_error() << "KinematicChainMapping only supports output vector of size 1";
       d_componentState.setValue(sofa::core::objectmodel::ComponentState::Invalid);
       return;
-    }
-
-    for(auto i = 0; i < 2; ++i)
-    {
-      msg_info() << "dataVecOutPos[" << i << "] = " << dataVecOutPos[i];
     }
 
     if (dataVecInPos.size() > 1)
@@ -140,38 +137,48 @@ namespace sofa::component::mapping::nonlinear
       return;
     }
 
+
     msg_info() << "========= KinematicChainMapping apply main";
 
-    VecCoord_t<Out> _dataVecOutPosJoints(m_model->njoints);
-    helper::ReadAccessor< DataVecCoord_t<Out> > ra_dataVecOutPos = *dataVecOutPos[0];
-    for(auto i = 0ul; i < m_model->njoints; ++i)
-    {
-      _dataVecOutPosJoints[i] = ra_dataVecOutPos[i];
-    }
-    VecCoord_t<Out> _dataVecOutPosFrames(m_extraFrames.size());
-    for(auto i = 0ul; i < m_extraFrames.size(); ++i)
-    {
-      _dataVecOutPosFrames[i] = ra_dataVecOutPos[i + m_model->njoints];
-    }
+    // VecCoord_t<Out> _dataVecOutPosJoints(m_model->njoints);
+    // helper::ReadAccessor< DataVecCoord_t<Out> > ra_dataVecOutPos = *dataVecOutPos[0];
+    // for(auto i = 0ul; i < m_model->njoints; ++i)
+    // {
+    //   _dataVecOutPosJoints[i] = ra_dataVecOutPos[i];
+    // }
+    // VecCoord_t<Out> _dataVecOutPosFrames(m_extraFrames.size());
+    // for(auto i = 0ul; i < m_extraFrames.size(); ++i)
+    // {
+    //   _dataVecOutPosFrames[i] = ra_dataVecOutPos[i + m_model->njoints];
+    // }
+    // helper::ReadAccessor< DataVecCoord_t<In> > _dataVecInPos = *dataVecInPos[0];
+    // helper::WriteAccessor< DataVecCoord_t<Out> > _dataVecOutPos = *dataVecOutPos[0];
+    // dataVecOutPos[0]->beginEdit()
+
+
+    // VecCoord_t<Out>* _out = dataVecOutPos[0]->beginEdit();
+    // const VecCoord_t<In>* _in = dataVecInPos[0]->getValue();
 
     if (not dataVecInRootPos.empty())
     {
-      apply(mparams, _dataVecOutPosJoints, _dataVecOutPosFrames, *dataVecInPos[0], dataVecInRootPos[0]);
+      // helper::ReadAccessor< DataVecCoord_t<InRoot> > _dataVecInRootPos = *dataVecInRootPos[0];
+      apply(dataVecOutPos[0]->beginEdit(), &dataVecInPos[0]->getValue(), &dataVecInRootPos[0]->getValue());
     }
     else
     {
-      apply(mparams, _dataVecOutPosJoints, _dataVecOutPosFrames, *dataVecInPos[0], nullptr);
+      apply(dataVecOutPos[0]->beginEdit(), &dataVecInPos[0]->getValue(), nullptr);
     }
+    dataVecOutPos[0]->endEdit();
 
-    helper::WriteAccessor< DataVecCoord_t<Out> > w_dataVecOutPos = *dataVecOutPos[0];
-    for(auto i = 0ul; i < m_model->njoints; ++i)
-    {
-      w_dataVecOutPos[i] = _dataVecOutPosJoints[i];
-    }
-    for(auto i = 0ul; i < m_extraFrames.size(); ++i)
-    {
-      w_dataVecOutPos[i + m_model->njoints] = _dataVecOutPosFrames[i];
-    }
+    // helper::WriteAccessor< DataVecCoord_t<Out> > w_dataVecOutPos = *dataVecOutPos[0];
+    // for(auto i = 0ul; i < m_model->njoints; ++i)
+    // {
+    //   w_dataVecOutPos[i] = _dataVecOutPosJoints[i];
+    // }
+    // for(auto i = 0ul; i < m_extraFrames.size(); ++i)
+    // {
+    //   w_dataVecOutPos[i + m_model->njoints] = _dataVecOutPosFrames[i];
+    // }
   }
 
   template <class TIn, class TInRoot, class TOut>
@@ -180,22 +187,19 @@ namespace sofa::component::mapping::nonlinear
       const type::vector<const DataVecDeriv_t<In> *> &dataVecInVel,
       const type::vector<const DataVecDeriv_t<InRoot> *> &dataVecInRootVel)
   {
+    SOFA_UNUSED(mparams);
+
     if (d_componentState.getValue() == sofa::core::objectmodel::ComponentState::Invalid)
       return;
 
     if (dataVecOutVel.empty() or dataVecInVel.empty())
       return;
 
-    if (dataVecOutVel.size() != 1)
+    if (dataVecOutVel.size() > 1)
     {
-      msg_error() << "KinematicChainMapping only supports output vector of size 2 (one element for joints, one element for frames)";
+      msg_error() << "KinematicChainMapping only supports output vector of size 1";
       d_componentState.setValue(sofa::core::objectmodel::ComponentState::Invalid);
       return;
-    }
-
-    for(auto i = 0; i < 2; ++i)
-    {
-      msg_info() << "dataVecOutVel[" << i << "] = " << dataVecOutVel[i];
     }
 
     if (dataVecInVel.size() > 1)
@@ -214,36 +218,39 @@ namespace sofa::component::mapping::nonlinear
 
     msg_info() << "========= KinematicChainMapping applyJ main";
 
-    VecDeriv_t<Out> _dataVecOutVelJoints(m_model->njoints);
-    helper::ReadAccessor< DataVecDeriv_t<Out> > ra_dataVecOutVel = *dataVecOutVel[0];
-    for(auto i = 0ul; i < m_model->njoints; ++i)
-    {
-      _dataVecOutVelJoints[i] = ra_dataVecOutVel[i];
-    }
-    VecDeriv_t<Out> _dataVecOutVelFrames(m_extraFrames.size());
-    for(auto i = 0ul; i < m_extraFrames.size(); ++i)
-    {
-      _dataVecOutVelFrames[i] = ra_dataVecOutVel[i + m_model->njoints];
-    }
+    // VecDeriv_t<Out> _dataVecOutVelJoints(m_model->njoints);
+    // helper::ReadAccessor< DataVecDeriv_t<Out> > ra_dataVecOutVel = *dataVecOutVel[0];
+    // for(auto i = 0ul; i < m_model->njoints; ++i)
+    // {
+    //   _dataVecOutVelJoints[i] = ra_dataVecOutVel[i];
+    // }
+    // VecDeriv_t<Out> _dataVecOutVelFrames(m_extraFrames.size());
+    // for(auto i = 0ul; i < m_extraFrames.size(); ++i)
+    // {
+    //   _dataVecOutVelFrames[i] = ra_dataVecOutVel[i + m_model->njoints];
+    // }
 
+    // helper::ReadAccessor< DataVecDeriv_t<In> > _dataVecInVel = *dataVecInVel[0];
+    // helper::WriteAccessor< DataVecDeriv_t<Out> > _dataVecOutVel = *dataVecOutVel[0];
     if (not dataVecInRootVel.empty())
     {
-      applyJ(mparams, _dataVecOutVelJoints, _dataVecOutVelFrames, *dataVecInVel[0], dataVecInRootVel[0]);
+      // helper::ReadAccessor< DataVecDeriv_t<InRoot> > _dataVecInRootVel = *dataVecInRootVel[0];
+      applyJ(dataVecOutVel[0]->beginEdit(), &dataVecInVel[0]->getValue(), &dataVecInRootVel[0]->getValue());
     }
     else
     {
-      applyJ(mparams, _dataVecOutVelJoints, _dataVecOutVelFrames, *dataVecInVel[0], nullptr);
+      applyJ(dataVecOutVel[0]->beginEdit(), &dataVecInVel[0]->getValue(), nullptr);
     }
-
-    helper::WriteAccessor< DataVecDeriv_t<Out> > wa_dataVecVelPos = *dataVecOutVel[0];
-    for(auto i = 0ul; i < m_model->njoints; ++i)
-    {
-      wa_dataVecVelPos[i] = _dataVecOutVelJoints[i];
-    }
-    for(auto i = 0ul; i < m_extraFrames.size(); ++i)
-    {
-      wa_dataVecVelPos[i + m_model->njoints] = _dataVecOutVelFrames[i];
-    }
+    dataVecOutVel[0]->endEdit();
+    // helper::WriteAccessor< DataVecDeriv_t<Out> > wa_dataVecVelPos = *dataVecOutVel[0];
+    // for(auto i = 0ul; i < m_model->njoints; ++i)
+    // {
+    //   wa_dataVecVelPos[i] = _dataVecOutVelJoints[i];
+    // }
+    // for(auto i = 0ul; i < m_extraFrames.size(); ++i)
+    // {
+    //   wa_dataVecVelPos[i + m_model->njoints] = _dataVecOutVelFrames[i];
+    // }
   }
 
   template <class TIn, class TInRoot, class TOut>
@@ -252,6 +259,8 @@ namespace sofa::component::mapping::nonlinear
       const type::vector<DataVecDeriv_t<InRoot> *> &dataVecOut2Force,
       const type::vector<const DataVecDeriv_t<Out> *> &dataVecInForce)
   {
+    SOFA_UNUSED(mparams);
+
     if (d_componentState.getValue() == sofa::core::objectmodel::ComponentState::Invalid)
       return;
 
@@ -281,22 +290,27 @@ namespace sofa::component::mapping::nonlinear
 
     msg_info() << "========= KinematicChainMapping applyJT main";
     
-    VecDeriv_t<Out> _dataVecInForceJoints(m_model->njoints);
-    helper::ReadAccessor< DataVecDeriv_t<Out> > ra_dataVecInForce = *dataVecInForce[0];
-    for(auto i = 0ul; i < m_model->njoints; ++i)
-    {
-      _dataVecInForceJoints[i] = ra_dataVecInForce[i];
-    }
+    // VecDeriv_t<Out> _dataVecInForceJoints(m_model->njoints);
+    // helper::ReadAccessor< DataVecDeriv_t<Out> > ra_dataVecInForce = *dataVecInForce[0];
+    // for(auto i = 0ul; i < m_model->njoints; ++i)
+    // {
+    //   _dataVecInForceJoints[i] = ra_dataVecInForce[i];
+    // }
 
+    // helper::ReadAccessor< DataVecDeriv_t<In> > _dataVecOut1Force = *dataVecOut1Force[0];
+    // helper::WriteAccessor< DataVecDeriv_t<Out> > _dataVecInForce = *dataVecInForce[0];
     if (not dataVecOut2Force.empty())
     {
-      applyJT(mparams, *dataVecOut1Force[0], dataVecOut2Force[0], _dataVecInForceJoints);
+      // helper::ReadAccessor< DataVecDeriv_t<InRoot> > _dataVecOut2Force = *dataVecOut2Force[0];
+      applyJT(dataVecOut1Force[0]->beginEdit(), dataVecOut2Force[0]->beginEdit(), &dataVecInForce[0]->getValue());
+      dataVecOut2Force[0]->endEdit();
     }
     else
     {
-      applyJT(mparams, *dataVecOut1Force[0], nullptr, _dataVecInForceJoints);
+      applyJT(dataVecOut1Force[0]->beginEdit(), nullptr, &dataVecInForce[0]->getValue());
     }
 
+    dataVecOut1Force[0]->endEdit();
     // helper::WriteAccessor< DataVecDeriv_t<Out> > wa_dataVecInForce = *dataVecInForce[0];
     // for(auto i = 0ul; i < m_model->njoints; ++i)
     // {
@@ -310,6 +324,8 @@ namespace sofa::component::mapping::nonlinear
       const type::vector<DataMatrixDeriv_t<InRoot> *> &dataMatOut2Const,
       const type::vector<const DataMatrixDeriv_t<Out> *> &dataMatInConst)
   {
+    SOFA_UNUSED(cparams);
+
     if (d_componentState.getValue() == sofa::core::objectmodel::ComponentState::Invalid)
       return;
 
@@ -338,14 +354,22 @@ namespace sofa::component::mapping::nonlinear
     }
 
     msg_info() << "========= KinematicChainMapping applyJT matrix main";
+
+    // helper::ReadAccessor< DataVecDeriv_t<In> > _dataMatOut1Const = *dataMatOut1Const[0];
+    // helper::WriteAccessor< DataVecDeriv_t<Out> > _dataMatInConst = *dataMatInConst[0];
     if (not dataMatOut2Const.empty())
     {
-      applyJT(cparams, *dataMatOut1Const[0], dataMatOut2Const[0], *dataMatInConst[0]);
+      // helper::ReadAccessor< DataVecDeriv_t<InRoot> > _dataMatOut2Const = *dataMatOut2Const[0];
+      // applyJT(_dataMatOut1Const, _dataMatOut2Const, _dataMatInConst);
+      applyJT(dataMatOut1Const[0]->beginEdit(), dataMatOut2Const[0]->beginEdit(), &dataMatInConst[0]->getValue());
+      dataMatOut2Const[0]->endEdit();
     }
     else
     {
-      applyJT(cparams, *dataMatOut1Const[0], nullptr, *dataMatInConst[0]);
+      applyJT(dataMatOut1Const[0]->beginEdit(), nullptr, &dataMatInConst[0]->getValue());
+      // applyJT(_dataMatOut1Const, nullptr, _dataMatInConst);
     }
+    dataMatOut1Const[0]->endEdit();
   }
 
   template <class TIn, class TInRoot, class TOut>
@@ -391,14 +415,10 @@ namespace sofa::component::mapping::nonlinear
 
   template <class TIn, class TInRoot, class TOut>
   void KinematicChainMapping<TIn, TInRoot, TOut>::apply(
-      const core::MechanicalParams *mparams,
-      VecCoord_t<Out> &_out_joints,
-      VecCoord_t<Out> &_out_frames,
-      const DataVecCoord_t<In> &in,
-      const DataVecCoord_t<InRoot> *inRoot)
+      VecCoord_t<Out>* out,
+      const VecCoord_t<In>* in,
+      const VecCoord_t<InRoot>* inRoot)
   {
-    SOFA_UNUSED(mparams);
-
     assert(m_model);
 
     if (d_componentState.getValue() == sofa::core::objectmodel::ComponentState::Invalid)
@@ -406,27 +426,27 @@ namespace sofa::component::mapping::nonlinear
 
     msg_info() << "========= KinematicChainMapping apply entering...";
 
-    helper::ReadAccessor< DataVecCoord_t<In> > _in = in;
+    // helper::ReadAccessor< DataVecCoord_t<In> > _in = in;
     // helper::WriteOnlyAccessor< DataVecCoord_t<Out> > _out_joints = out_joints;
     // helper::WriteOnlyAccessor< DataVecCoord_t<Out> > _out_frames = out_frames;
 
-    msg_info() << "========= KinematicChainMapping  apply _out_joints.size = " << _out_joints.size() << " (should be " <<  m_model->njoints << ")";
-    msg_info() << "========= KinematicChainMapping apply _out_frames.size = " << _out_frames.size() << " (should be " <<  m_extraFrames.size() << ")";
+    // msg_info() << "========= KinematicChainMapping  apply _out_joints.size = " << _out_joints.size() << " (should be " <<  m_model->njoints << ")";
+    msg_info() << "========= KinematicChainMapping apply out.size = " << out->size() << " (should be " <<  m_model->njoints + m_extraFrames.size() << ")";
     msg_info() << "======= kinematicChainMapping apply isMechanical = " << this->isMechanical();
 
 
     Eigen::VectorXd q = Eigen::VectorXd::Zero(m_model->nq);
     if (m_fromRootModel and inRoot != nullptr)
     {
-      helper::ReadAccessor< DataVecCoord_t<InRoot> > _inRoot = inRoot;
+      // helper::ReadAccessor< DataVecCoord_t<InRoot> > _inRoot = inRoot;
 
-      const sofa::defaulttype::RigidCoord<3, double> &rootPose_w = _inRoot[d_indexFromRoot.getValue()];
+      const sofa::defaulttype::RigidCoord<3, double> &rootPose_w = (*inRoot)[d_indexFromRoot.getValue()];
       q.head<7>() = sofa::rigidbodydynamics::se3ToEigen(rootPose_w);
-      q.tail(_in.size()) = sofa::rigidbodydynamics::vectorVec1ToEigen(_in, m_model->nq);
+      q.tail((*in).size()) = sofa::rigidbodydynamics::vectorVec1ToEigen(*in, m_model->nq);
     }
     else
     {
-      q = sofa::rigidbodydynamics::vectorVec1ToEigen(_in, m_model->nq);
+      q = sofa::rigidbodydynamics::vectorVec1ToEigen(*in, m_model->nq);
     }
 
     // Computes joints Jacobians and forward kinematics. Jacobians will
@@ -447,99 +467,84 @@ namespace sofa::component::mapping::nonlinear
     for (auto jointIdx = 0ul; jointIdx < m_model->njoints; ++jointIdx)
     {
       const auto &frameIdx = m_bodyCoMFrames[jointIdx];
-      _out_joints[jointIdx] = sofa::rigidbodydynamics::se3ToSofaType(m_data->oMf[frameIdx]);
+      (*out)[jointIdx] = sofa::rigidbodydynamics::se3ToSofaType(m_data->oMf[frameIdx]);
     }
     // Single other output vector of size num extra frames
     // assert(_out_frames.size() == m_extraFrames.size());
 
-    // for (auto i = 0ul; i < m_extraFrames.size(); ++i)
-    // {
-    //   const auto &frameIdx = m_extraFrames[i];
-    //   _out_frames[i] = sofa::rigidbodydynamics::se3ToSofaType(m_data->oMf[frameIdx]);
-    // }
+    for (auto i = 0ul; i < m_extraFrames.size(); ++i)
+    {
+      const auto &frameIdx = m_extraFrames[i];
+      (*out)[i + m_model->njoints] = sofa::rigidbodydynamics::se3ToSofaType(m_data->oMf[frameIdx]);
+    }
     msg_info() << "========= KinematicChainMapping apply exiting...";
   }
 
   template <class TIn, class TInRoot, class TOut>
   void KinematicChainMapping<TIn, TInRoot, TOut>::applyJ(
-      const core::MechanicalParams* mparams, 
-      // DataVecDeriv_t<Out>& out_joints,
-      // DataVecDeriv_t<Out>& out_frames,
-      VecDeriv_t<Out>& _out_joints,
-      VecDeriv_t<Out>& _out_frames,
-      const DataVecDeriv_t<In>& in,
-      const DataVecDeriv_t<InRoot>* inRoot)
+      VecDeriv_t<Out>* out,
+      const VecDeriv_t<In>* in,
+      const VecDeriv_t<InRoot>* inRoot)
   {
-    SOFA_UNUSED(mparams);
-
     assert(m_model);
 
     if (d_componentState.getValue() == sofa::core::objectmodel::ComponentState::Invalid)
       return;
 
     msg_info() << "========= KinematicChainMapping applyJ entering...";
-    helper::ReadAccessor< DataVecDeriv_t<In> > _in = in;
+    // helper::ReadAccessor< DataVecDeriv_t<In> > _in = in;
     // helper::WriteOnlyAccessor< DataVecDeriv_t<Out> > _out_joints = out_joints;
     // helper::WriteOnlyAccessor< DataVecDeriv_t<Out> > _out_frames = out_frames;
 
-    msg_info() << "========= KinematicChainMapping  applyJ _out_joints.size = " << _out_joints.size() << " (should be " <<  m_model->njoints << ")";
-    msg_info() << "========= KinematicChainMapping applyJ _out_frames.size = " << _out_frames.size() << " (should be " <<  m_extraFrames.size() << ")";
+    // msg_info() << "========= KinematicChainMapping  applyJ _out_joints.size = " << _out_joints.size() << " (should be " <<  m_model->njoints << ")";
+    // msg_info() << "========= KinematicChainMapping applyJ _out_frames.size = " << _out_frames.size() << " (should be " <<  m_extraFrames.size() << ")";
     msg_info() << "======= kinematicChainMapping applyJ isMechanical = " << this->isMechanical();
 
     // map in configuration to pinocchio
     Eigen::VectorXd dq = Eigen::VectorXd::Zero(m_model->nv);
     if (m_fromRootModel and inRoot != nullptr)
     {
-      helper::ReadAccessor< DataVecDeriv_t<InRoot> > _inRoot = inRoot;
+      // helper::ReadAccessor< DataVecDeriv_t<InRoot> > _inRoot = inRoot;
 
-      const sofa::defaulttype::RigidDeriv<3, double> &rootVel_w = _inRoot[d_indexFromRoot.getValue()];
+      const sofa::defaulttype::RigidDeriv<3, double> &rootVel_w = (*inRoot)[d_indexFromRoot.getValue()];
       dq.head<6>() = sofa::rigidbodydynamics::spatialVelocityToEigen(rootVel_w);
-      dq.tail(_in.size()) = sofa::rigidbodydynamics::vectorVec1ToEigen(_in, m_model->nv);
+      dq.tail((*in).size()) = sofa::rigidbodydynamics::vectorVec1ToEigen(*in, m_model->nv);
     }
     else
     {
-      dq = sofa::rigidbodydynamics::vectorVec1ToEigen(_in, m_model->nv);
+      dq = sofa::rigidbodydynamics::vectorVec1ToEigen(*in, m_model->nv);
     }
 
     // Single output vector of size njoints
-    assert(_out_joints.size() == m_model->njoints);
+    assert((*out).size() == (m_model->njoints + m_extraFrames.size()));
 
-    
     for (auto jointIdx = 0ul; jointIdx < m_model->njoints; ++jointIdx)
     {
       pinocchio::Data::Matrix6x J = pinocchio::Data::Matrix6x::Zero(6, m_model->nv);
       const auto &frameIdx = m_bodyCoMFrames[jointIdx];
       pinocchio::getFrameJacobian(*m_model, *m_data, frameIdx, pinocchio::LOCAL_WORLD_ALIGNED, J);
       Eigen::VectorXd dg = J * dq;
-      _out_joints[jointIdx] = sofa::rigidbodydynamics::vec6ToSofaType<Eigen::VectorXd>(dg);
+      (*out)[jointIdx] = sofa::rigidbodydynamics::vec6ToSofaType<Eigen::VectorXd>(dg);
     }
 
-    // assert(_out_frames.size() == m_extraFrames.size());
-
-
-    // // Single output vector of size number of extra frames
-    // for (auto i = 0ul; i < m_extraFrames.size(); ++i)
-    // {
-    //   pinocchio::Data::Matrix6x J = pinocchio::Data::Matrix6x::Zero(6, m_model->nv);
-    //   const auto &frameIdx = m_extraFrames[i];
-    //   pinocchio::getFrameJacobian(*m_model, *m_data, frameIdx, pinocchio::LOCAL_WORLD_ALIGNED, J);
-    //   Eigen::VectorXd dg = J * dq;
-    //   _out_frames[i] = sofa::rigidbodydynamics::vec6ToSofaType<Eigen::VectorXd>(dg);
-    // }
-
+    // Single output vector of size number of extra frames
+    for (auto i = 0ul; i < m_extraFrames.size(); ++i)
+    {
+      pinocchio::Data::Matrix6x J = pinocchio::Data::Matrix6x::Zero(6, m_model->nv);
+      const auto &frameIdx = m_extraFrames[i];
+      pinocchio::getFrameJacobian(*m_model, *m_data, frameIdx, pinocchio::LOCAL_WORLD_ALIGNED, J);
+      Eigen::VectorXd dg = J * dq;
+      (*out)[i + m_model->njoints] = sofa::rigidbodydynamics::vec6ToSofaType<Eigen::VectorXd>(dg);
+    }
     msg_info() << "========= KinematicChainMapping applyJ exiting...";
   }
 
   template <class TIn, class TInRoot, class TOut>
   void KinematicChainMapping<TIn, TInRoot, TOut>::applyJT(
-      const core::MechanicalParams *mparams, 
-      DataVecDeriv_t<In>& out,
-      DataVecDeriv_t<InRoot>* outRoot,
-      const VecDeriv_t<Out>& _in_joints)
-      // const DataVecDeriv_t<Out>& in_joints)
+     VecDeriv_t<In>* out,
+     VecDeriv_t<InRoot>* outRoot,
+     const VecDeriv_t<Out>* in)
   {
-    SOFA_UNUSED(mparams);
-
     assert(m_model);
 
     if (d_componentState.getValue() == sofa::core::objectmodel::ComponentState::Invalid)
@@ -551,9 +556,9 @@ namespace sofa::component::mapping::nonlinear
     // out will be the resulting torque on each joint
     // size = nv if no root joint, nv+6 if using free-flyer root joint
     // XXX ERROR: nv-6 if using free-flyer root joint -> confirm
-    helper::WriteAccessor<DataVecDeriv_t<In>> _out(out);
+    // helper::WriteAccessor<DataVecDeriv_t<In>> _out(out);
 
-    msg_info() << "=================== out.size() = " << _out.size();
+    msg_info() << "=================== out.size() = " << (*out).size();
     msg_info() << "=================== nv = " << m_model->nv;
     // in is a vector of spatial forces applied at each joint (actually frame)
     // size = njoints
@@ -563,7 +568,7 @@ namespace sofa::component::mapping::nonlinear
     for (auto jointIdx = 0ul; jointIdx < m_model->njoints; ++jointIdx)
     {
       // jointForce is a spatial force so 6-vector
-      const Eigen::VectorXd jointForce = sofa::rigidbodydynamics::vectorToEigen(_in_joints[jointIdx], 6);
+      const Eigen::VectorXd jointForce = sofa::rigidbodydynamics::vectorToEigen((*in)[jointIdx], 6);
       pinocchio::Data::Matrix6x J = pinocchio::Data::Matrix6x::Zero(6, m_model->nv);
       const auto &frameIdx = m_bodyCoMFrames[jointIdx];
 
@@ -574,13 +579,13 @@ namespace sofa::component::mapping::nonlinear
     if (m_fromRootModel and outRoot != nullptr)
     {
       // joint torques contains first 6 parameters for the root joint, and nv-6 parameters for other joints
-      helper::WriteAccessor<DataVecDeriv_t<InRoot>> _outRoot(outRoot);
+      // helper::WriteAccessor<DataVecDeriv_t<InRoot>> _outRoot(outRoot);
       // write (add) root joint spatial force
-      _outRoot[0] += sofa::rigidbodydynamics::vec6ToSofaType(jointsTorques.head<6>());
+      (*outRoot)[0] += sofa::rigidbodydynamics::vec6ToSofaType(jointsTorques.head<6>());
       // write (add) joint torques
       for (auto i = 0ul; i < jointsTorques.size() - 6; ++i)
       {
-        _out[i][0] += jointsTorques[i + 6];
+        (*out)[i][0] += jointsTorques[i + 6];
       }
     }
     else
@@ -588,7 +593,7 @@ namespace sofa::component::mapping::nonlinear
       // no root joints case, only write (add) joint torques
       for (auto i = 0ul; i < jointsTorques.size(); ++i)
       {
-        _out[i][0] += jointsTorques[i];
+        (*out)[i][0] += jointsTorques[i];
       }
     }
     msg_info() << "========= KinematicChainMapping applyJT exiting...";
@@ -596,13 +601,10 @@ namespace sofa::component::mapping::nonlinear
 
   template <class TIn, class TInRoot, class TOut>
   void KinematicChainMapping<TIn, TInRoot, TOut>::applyJT(
-      const core::ConstraintParams *cparams, 
-      DataMatrixDeriv_t<In>& out,
-      DataMatrixDeriv_t<InRoot>* outRoot,
-      const DataMatrixDeriv_t<Out>& in_joints)
+      MatrixDeriv_t<In>* out,
+      MatrixDeriv_t<InRoot>* outRoot,
+      const MatrixDeriv_t<Out>* in)
   {
-    SOFA_UNUSED(cparams);
-
     assert(m_model);
 
     if (d_componentState.getValue() == sofa::core::objectmodel::ComponentState::Invalid)
@@ -610,11 +612,11 @@ namespace sofa::component::mapping::nonlinear
 
     msg_info() << "========= KinematicChainMapping applyJT matrix entering...";
     // out will be the resulting torque on each joint
-    helper::WriteAccessor<DataMatrixDeriv_t<In>> _out(out);
-    helper::ReadAccessor<DataMatrixDeriv_t<Out>> _in_joints(in_joints);
+    // helper::WriteAccessor<DataMatrixDeriv_t<In>> _out(out);
+    // helper::ReadAccessor<DataMatrixDeriv_t<Out>> _in_joints(in_joints);
 
     // row = constraint
-    for (auto rowIt = _in_joints->begin(); rowIt != _in_joints->end(); ++rowIt)
+    for (auto rowIt = in->begin(); rowIt != in->end(); ++rowIt)
     {
       Eigen::VectorXd jointsTorques = Eigen::VectorXd::Zero(m_model->nv);
       // col = dof (bodies)
@@ -637,13 +639,13 @@ namespace sofa::component::mapping::nonlinear
         if(jointsTorques.squaredNorm() > kMinTorqueSqrd)// dismiss dofs resulting in null torque
         {
           // write (add) root joint spatial force
-          helper::WriteAccessor<DataMatrixDeriv_t<InRoot>> _outRoot(outRoot);
+          // helper::WriteAccessor<DataMatrixDeriv_t<InRoot>> _outRoot(outRoot);
 
-          auto oRoot = _outRoot->writeLine(rowIt.index());
+          auto oRoot = outRoot->writeLine(rowIt.index());
           const Deriv_t<InRoot> rootWrench(sofa::rigidbodydynamics::vec6ToSofaType(jointsTorques.head<6>()));
           oRoot.addCol(0, rootWrench);
           // write summed joint torques for this constraint to output
-          auto outRowIt = _out->writeLine(rowIt.index());
+          auto outRowIt = out->writeLine(rowIt.index());
           for (auto i = 0ul; i < jointsTorques.size() - 6; ++i)
           {
             const Deriv_t<In> torque(jointsTorques[i + 6]); // InDeriv is Vec1 type
@@ -656,7 +658,7 @@ namespace sofa::component::mapping::nonlinear
         // write summed joint torques for this constraint to output
         if(jointsTorques.squaredNorm() > kMinTorqueSqrd) // dismiss dofs resulting in null torque
         {
-          auto outRowIt = _out->writeLine(rowIt.index());
+          auto outRowIt = out->writeLine(rowIt.index());
           for (auto i = 0ul; i < jointsTorques.size(); ++i)
           {
             const Deriv_t<In> torque(jointsTorques[i]); // InDeriv is Vec1 type

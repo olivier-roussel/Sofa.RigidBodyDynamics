@@ -145,12 +145,12 @@ namespace sofa::rigidbodydynamics
         msg_info() << "Joint[" << jointIdx << "]: " << model->names[jointIdx] << " / " << model->joints[jointIdx];
       }
 
-      // msg_info() << "Adding all frames to kinematic mapping...";
-      // for(auto frameIdx = 0u; frameIdx < model->nframes; ++frameIdx)
-      // {
-      //   msg_info() << "Frame[" << frameIdx << "]: " << model->frames[frameIdx].name <<" / parent Joint = " << model->frames[frameIdx].parentJoint << " / parent Frame = " << model->frames[frameIdx].parentFrame;
-      //   extraFrames.push_back(frameIdx);
-      // }
+      msg_info() << "Adding all frames to kinematic mapping...";
+      for(auto frameIdx = 0u; frameIdx < model->nframes; ++frameIdx)
+      {
+        msg_info() << "Frame[" << frameIdx << "]: " << model->frames[frameIdx].name <<" / parent Joint = " << model->frames[frameIdx].parentJoint << " / parent Frame = " << model->frames[frameIdx].parentFrame;
+        extraFrames.push_back(frameIdx);
+      }
 
       // TODO use collisionModel to create collision nodes in SOFA
       collisionModel = std::make_shared<pinocchio::GeometryModel>();
