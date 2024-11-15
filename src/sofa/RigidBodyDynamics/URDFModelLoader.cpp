@@ -113,11 +113,11 @@ namespace sofa::rigidbodydynamics
         context->removeChild(rootJointNode);
         msg_info() << "RootJoint node was already present in robot scene tree. Removing it...";
       }
-      const auto jointsNode = context->getChild("Joints");
-      if (jointsNode)
+      const auto modelNode = context->getChild("Model");
+      if (modelNode)
       {
-        context->removeChild(jointsNode);
-        msg_info() << "Joints node was already present in robot scene tree. Removing it...";
+        context->removeChild(modelNode);
+        msg_info() << "Model node was already present in robot scene tree. Removing it...";
       }
     }
 
@@ -185,8 +185,6 @@ namespace sofa::rigidbodydynamics
     auto nqWithoutRootJoint = useFreeFlyerRootJoint ? model->nq - 7 : model->nq;
     msg_info() << "nqWithoutRootJoint = " << nqWithoutRootJoint;
 
-    msg_info() << "=========== d_qInit isSet = " << d_qInit.isSet();
-    msg_info() << "=========== d_qRest isSet = " << d_qRest.isSet();
     if(not d_qInit.isSet())
     {
       sofa::type::Vec1d defaultDofValue;
@@ -208,7 +206,7 @@ namespace sofa::rigidbodydynamics
     jointsDofs->x0.setParent(&d_qRest);
     robotNode->addObject(jointsDofs);
 
-    const auto jointsNode = robotNode->createChild("Joints");
+    const auto modelNode = robotNode->createChild("Model");
 
     // create mapping between robot joints dofs and its bodies placements
     const auto kinematicChainMapping = New<sofa::component::mapping::nonlinear::KinematicChainMapping<Vec1Types, Rigid3Types, Rigid3Types>>();
@@ -222,20 +220,51 @@ namespace sofa::rigidbodydynamics
     kinematicChainMapping->addInputModel1(jointsDofs.get());
 
     // set mapping output
-    // one dof container for all joints
+    // one dof container for all joints and extra frames
+    const auto mappedDof = New<MechanicalObjectRigid3>();
+    mappedDof->setName("mappedDof");
+    mappedDof->resize(model->njoints + extraFrames.size());
+    modelNode->addObject(mappedDof);
+
+    kinematicChainMapping->addOutputModel(mappedDof.get(), mappedDof->getPathName());
+
+    modelNode->addObject(kinematicChainMapping);
+
+    // set joints
+    const auto jointsNode = robotNode->createChild("Joints");
     const auto jointsDof = New<MechanicalObjectRigid3>();
     jointsDof->setName("jointsDof");
-    jointsDof->resize(model->njoints + extraFrames.size());
+    jointsDof->resize(model->njoints);
     jointsNode->addObject(jointsDof);
-    kinematicChainMapping->addOutputModel(jointsDof.get(), jointsDof->getPathName());
-    // // one dof container for all extra frames
-    // const auto framesDof = New<MechanicalObjectRigid3>();
-    // framesDof->setName("framesDof");
-    // framesDof->resize(extraFrames.size());
-    // jointsNode->addObject(framesDof);
-    // kinematicChainMapping->addOutputModel(framesDof.get(), framesDof->getPathName());
+    const auto jointsMapping = New<sofa::component::mapping::nonlinear::RigidMapping<Rigid3Types, Rigid3Types>>();
+    jointsMapping->setName("jointsMapping");
+    jointsMapping->setModels(mappedDof.get(), jointsDof.get());
+    std::vector<unsigned int> jointsDofIndexes;
+    for(auto i = 0; i < model->njoints; ++i)
+    {
+      jointsDofIndexes.push_back(i);
+    }
+    jointsMapping->d_rigidIndexPerPoint = jointsDofIndexes;
+    jointsMapping->d_globalToLocalCoords = false;
+    jointsNode->addObject(jointsMapping);
 
-    jointsNode->addObject(kinematicChainMapping);
+    // set frames
+    const auto framesNode = robotNode->createChild("Frames");
+    const auto framesDof = New<MechanicalObjectRigid3>();
+    framesDof->setName("framesDof");
+    framesDof->resize(extraFrames.size());
+    framesNode->addObject(framesDof);
+    const auto framesMapping = New<sofa::component::mapping::nonlinear::RigidMapping<Rigid3Types, Rigid3Types>>();
+    framesMapping->setName("framesMapping");
+    framesMapping->setModels(mappedDof.get(), framesDof.get());
+    std::vector<unsigned int> framesDofIndexes;
+    for(auto i = 0; i < extraFrames.size(); ++i)
+    {
+      framesDofIndexes.push_back(model->njoints + i);
+    }
+    framesMapping->d_rigidIndexPerPoint = framesDofIndexes;
+    framesMapping->d_globalToLocalCoords = false;
+    framesNode->addObject(framesMapping);
 
     // set mapping input2: free flyer root joint if any specified
     if(useFreeFlyerRootJoint)
@@ -247,7 +276,7 @@ namespace sofa::rigidbodydynamics
       rootJointDof->resize(1);
       rootJointNode->addObject(rootJointDof);
 
-      // Bodies node have two parents: rootJointNode and robotNode
+      // Joints node have two parents: rootJointNode and robotNode
       rootJointNode->addChild(jointsNode);
 
       // set mapping input2
@@ -285,7 +314,7 @@ namespace sofa::rigidbodydynamics
 
       const auto bodyMapping = New<sofa::component::mapping::nonlinear::RigidMapping<Rigid3Types, Rigid3Types>>();
       bodyMapping->setName("jointMapping");
-      bodyMapping->setModels(jointsDof.get(), bodyRigid.get());
+      bodyMapping->setModels(mappedDof.get(), bodyRigid.get());
       bodyMapping->d_index = jointIdx;
       bodyMapping->d_globalToLocalCoords = false;
       jointNode->addObject(bodyMapping);

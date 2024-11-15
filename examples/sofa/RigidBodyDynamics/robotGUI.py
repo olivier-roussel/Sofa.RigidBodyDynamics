@@ -14,7 +14,6 @@ class App(threading.Thread):
         self.daemon = True
         self.start()
 
-        print("============ qRest size : ", len(qRest))
         self.qRest = qRest
 
     def reset(self):

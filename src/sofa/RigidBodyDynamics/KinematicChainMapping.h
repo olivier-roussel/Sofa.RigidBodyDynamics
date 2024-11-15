@@ -70,6 +70,7 @@ namespace sofa::component::mapping::nonlinear
       const type::vector<DataMatrixDeriv_t<InRoot> *> &dataMatOut2Const,
       const type::vector<const DataMatrixDeriv_t<Out> *> &dataMatInConst) override;
 
+    // TODO
     void applyDJT(
       const core::MechanicalParams * /*mparams*/,
       core::MultiVecDerivId /*inForce*/,
@@ -78,6 +79,7 @@ namespace sofa::component::mapping::nonlinear
       // no op
     }
 
+    // XXX necessary ?
     const sofa::linearalgebra::BaseMatrix *getJ() override { return nullptr; }
 
     void init() override;
@@ -98,35 +100,6 @@ namespace sofa::component::mapping::nonlinear
       // no op
     }
 
-  private:
-    std::shared_ptr<pinocchio::Model> m_model;
-    std::shared_ptr<pinocchio::Data> m_data;
-    std::vector<pinocchio::FrameIndex> m_bodyCoMFrames;
-    core::State<InRoot>* m_fromRootModel;
-
-    using core::Multi2Mapping<TIn, TInRoot, TOut>::d_componentState;
-    Data<sofa::Index> d_indexFromRoot; ///< Corresponding index if the base of the articulated system is attached to input2. Default is last index.
-
-    void checkIndexFromRoot();
-
-    // void apply(const core::MechanicalParams* mparams,
-    //   // DataVecCoord_t<Out>& out_joints,
-    //   // DataVecCoord_t<Out>& out_frames,
-    //   VecCoord_t<Out>& _out_joints,
-    //   VecCoord_t<Out>& _out_frames,
-    //   const DataVecCoord_t<In>& in,
-    //   const DataVecCoord_t<InRoot>* inRoot);
-
-    // void applyJ(
-    //   const core::MechanicalParams* mparams,
-    //   DataVecDeriv_t<Out>& out_joints,
-    //   DataVecDeriv_t<Out>& out_frames,
-    //   // VecDeriv_t<Out>& _out_joints,
-    //   // VecDeriv_t<Out>& _out_frames,
-    //   const DataVecDeriv_t<In>& in,
-    //   const DataVecDeriv_t<InRoot>* inRoot);
-
-public:
     virtual void apply(VecCoord_t<Out>* out,
                        const VecCoord_t<In>* in,
                        const VecCoord_t<InRoot>* inRoot);
@@ -143,19 +116,16 @@ public:
                          MatrixDeriv_t<InRoot>* outRoot,
                          const MatrixDeriv_t<Out>* in);
 
-// private:
-//     void applyJT(
-//       const core::MechanicalParams *mparams,
-//       DataVecDeriv_t<In>& out,
-//       DataVecDeriv_t<InRoot>* outRoot,
-//       const VecDeriv_t<Out>& in_joints);
-//       // const DataVecDeriv_t<Out>& in_joints);
+  private:
+    std::shared_ptr<pinocchio::Model> m_model;
+    std::shared_ptr<pinocchio::Data> m_data;
+    std::vector<pinocchio::FrameIndex> m_bodyCoMFrames;
+    core::State<InRoot>* m_fromRootModel;
 
-//     void applyJT(
-//       const core::ConstraintParams *mparams,
-//       DataMatrixDeriv_t<In>& out,
-//       DataMatrixDeriv_t<InRoot>* outRoot,
-//       const DataMatrixDeriv_t<Out>& in_joints);
+    using core::Multi2Mapping<TIn, TInRoot, TOut>::d_componentState;
+    Data<sofa::Index> d_indexFromRoot; ///< Corresponding index if the base of the articulated system is attached to input2. Default is last index.
+
+    void checkIndexFromRoot();
   };
 
 #if !defined(SOFA_COMPONENT_MAPPING_KINEMATICCHAINMAPPING_CPP)

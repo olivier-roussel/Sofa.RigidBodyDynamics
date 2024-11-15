@@ -72,11 +72,10 @@ class Robot:
         # Create constraint between gripper and the dummy mechanical object (3d position)
         constraintBodyIndex = 7
         robotNode = robotWrapperNode.getChild('Robot')
-        jointsNode = robotNode.getChild('Joints')
-        constraintsNode = jointsNode.addChild('Constraints')
+        constraintsNode = robotNode.addChild('Constraints')
         constraintsNode.addObject('MechanicalObject', name="attachedToRobotObject", template="Vec3d", position=[0., 0., 0.])
         constraintsNode.addObject('BilateralLagrangianConstraint', template="Vec3", object1="@attachedToRobotObject", object2="@dummyNode/fixedFrame", first_point="0", second_point="0")
-        constraintsNode.addObject('RigidMapping', template='Rigid,Vec3d', name='robotBodyMapping', index=constraintBodyIndex, input="@../jointsDof", output="@attachedToRobotObject")
+        constraintsNode.addObject('RigidMapping', template='Rigid,Vec3d', name='robotBodyMapping', index=constraintBodyIndex, input="@Joints/jointsDof", output="@attachedToRobotObject")
 
         return robotWrapperNode
 
