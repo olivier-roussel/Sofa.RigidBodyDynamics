@@ -54,7 +54,6 @@ namespace sofa::rigidbodydynamics
       d_addCollision(initData(&d_addCollision, true, "addCollision", "True if collision detection must be enabled for the robot (self-collision and other objects)")),
       d_qRest(initData(&d_qRest, "qRest", "Rest configuration values of robot DoFs")),
       d_qInit(initData(&d_qInit, "qInit", "Initial configuration values of robot DoFs"))
-      // d_extraFramesNames(initData(&d_extraFramesNames, "extraFramesNames", "Optional frames names to add to kinematic mapping"))
   {
   }
 
@@ -261,6 +260,17 @@ namespace sofa::rigidbodydynamics
     for(auto i = 0; i < extraFrames.size(); ++i)
     {
       framesDofIndexes.push_back(model->njoints + i);
+      // create a node + submapping for each frame
+      const auto& frame = model->frames[extraFrames[i]];
+      const auto frameNode = framesNode->createChild(frame.name);
+      const auto frameDof = New<MechanicalObjectRigid3>();
+      frameDof->setName("dof");
+      frameNode->addObject(frameDof);
+      const auto frameMapping = New<sofa::component::mapping::nonlinear::RigidMapping<Rigid3Types, Rigid3Types>>();
+      frameMapping->setName("frameMapping");
+      frameMapping->setModels(framesDof.get(), frameDof.get());  
+      frameMapping->d_index = i;
+      frameNode->addObject(frameMapping);
     }
     framesMapping->d_rigidIndexPerPoint = framesDofIndexes;
     framesMapping->d_globalToLocalCoords = false;
