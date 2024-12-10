@@ -371,10 +371,10 @@ namespace sofa::component::mapping::nonlinear
     // msg_info() << " frames placements updated";
 
     // Single output vector of size njoints + number of extra frames
-    assert((*out).size() == (m_model->njoints + m_extraFrames.size()));
+    assert((*out).size() == (m_model->njoints - 1 + m_extraFrames.size()));
 
     // Write joints
-    for (auto jointIdx = 0ul; jointIdx < m_model->njoints; ++jointIdx)
+    for (auto jointIdx = 0ul; jointIdx < m_model->njoints - 1; ++jointIdx)
     {
       const auto &frameIdx = m_bodyCoMFrames[jointIdx];
       (*out)[jointIdx] = sofa::rigidbodydynamics::se3ToSofaType(m_data->oMf[frameIdx]);
@@ -384,7 +384,9 @@ namespace sofa::component::mapping::nonlinear
     for (auto i = 0ul; i < m_extraFrames.size(); ++i)
     {
       const auto &frameIdx = m_extraFrames[i];
-      (*out)[i + m_model->njoints] = sofa::rigidbodydynamics::se3ToSofaType(m_data->oMf[frameIdx]);
+      // msg_info() << "out.size = " << (*out).size() << " / index = " << i + m_model->njoints - 1 << " / i = " << i;
+      // msg_info() << "m_data->oMf.size = " << m_data->oMf.size() << " / frameIdx = " << frameIdx;
+      (*out)[i + m_model->njoints - 1] = sofa::rigidbodydynamics::se3ToSofaType(m_data->oMf[frameIdx]);
     }
   }
 
@@ -415,10 +417,10 @@ namespace sofa::component::mapping::nonlinear
     }
 
     // Single output vector of size njoints + number of extra frames
-    assert((*out).size() == (m_model->njoints + m_extraFrames.size()));
+    assert((*out).size() == (m_model->njoints - 1 + m_extraFrames.size()));
 
     // Write joints
-    for (auto jointIdx = 0ul; jointIdx < m_model->njoints; ++jointIdx)
+    for (auto jointIdx = 0ul; jointIdx < m_model->njoints - 1; ++jointIdx)
     {
       pinocchio::Data::Matrix6x J = pinocchio::Data::Matrix6x::Zero(6, m_model->nv);
       const auto &frameIdx = m_bodyCoMFrames[jointIdx];
@@ -434,7 +436,7 @@ namespace sofa::component::mapping::nonlinear
       const auto &frameIdx = m_extraFrames[i];
       pinocchio::getFrameJacobian(*m_model, *m_data, frameIdx, pinocchio::LOCAL_WORLD_ALIGNED, J);
       Eigen::VectorXd dg = J * dq;
-      (*out)[i + m_model->njoints] = sofa::rigidbodydynamics::vec6ToSofaType<Eigen::VectorXd>(dg);
+      (*out)[i + m_model->njoints - 1] = sofa::rigidbodydynamics::vec6ToSofaType<Eigen::VectorXd>(dg);
     }
   }
 
@@ -459,7 +461,7 @@ namespace sofa::component::mapping::nonlinear
     // size = njoints
 
     Eigen::VectorXd jointsTorques = Eigen::VectorXd::Zero(m_model->nv);
-    for (auto jointIdx = 0ul; jointIdx < m_model->njoints; ++jointIdx)
+    for (auto jointIdx = 0ul; jointIdx < m_model->njoints - 1; ++jointIdx)
     {
       // jointForce is a spatial force so 6-vector
       const Eigen::VectorXd jointForce = sofa::rigidbodydynamics::vectorToEigen((*in)[jointIdx], 6);
@@ -468,6 +470,16 @@ namespace sofa::component::mapping::nonlinear
 
       pinocchio::getFrameJacobian(*m_model, *m_data, frameIdx, pinocchio::LOCAL_WORLD_ALIGNED, J);
       jointsTorques += J.transpose() * jointForce;
+    }
+    for (auto i = 0ul; i < m_extraFrames.size(); ++i)
+    {
+      // frameForce is a spatial force so 6-vector
+      const Eigen::VectorXd frameForce = sofa::rigidbodydynamics::vectorToEigen((*in)[m_model->njoints - 1 + i], 6);
+      pinocchio::Data::Matrix6x J = pinocchio::Data::Matrix6x::Zero(6, m_model->nv);
+      const auto &frameIdx = m_extraFrames[i];
+
+      pinocchio::getFrameJacobian(*m_model, *m_data, frameIdx, pinocchio::LOCAL_WORLD_ALIGNED, J);
+      jointsTorques += J.transpose() * frameForce;
     }
 
     if (m_fromRootModel and outRoot != nullptr)
@@ -504,6 +516,32 @@ namespace sofa::component::mapping::nonlinear
 
     // msg_info() << "========= KinematicChainMapping applyJT matrix entering...";
     // out will be the resulting torque on each joint
+    // out->clear();
+    // if(outRoot)
+    // {
+    //   outRoot->clear();
+    // }
+    // print output matrices
+    if (m_fromRootModel and outRoot != nullptr)
+    {
+      msg_info() << "BEGIN outRootWrench CRS matrix:";
+        // helper::WriteAccessor<DataMatrixDeriv_t<InRoot>> _outRoot(outRoot);
+      for (auto rowIt = outRoot->begin(); rowIt != outRoot->end(); ++rowIt)
+      {
+        for (auto colIt = rowIt.begin(); colIt != rowIt.end(); ++colIt)
+        {
+          msg_info() << "row[" << rowIt.index() << "], col[" << colIt.index() << "]:" << colIt.val();
+        }
+      }
+    }
+    msg_info() << "BEGIN outTorques CRS matrix:";
+    for (auto rowIt = out->begin(); rowIt != out->end(); ++rowIt)
+    {
+      for (auto colIt = rowIt.begin(); colIt != rowIt.end(); ++colIt)
+      {
+        msg_info() << "row[" << rowIt.index() << "], col[" << colIt.index() << "]:" << colIt.val();
+      }
+    }
 
     // row = constraint
     for (auto rowIt = in->begin(); rowIt != in->end(); ++rowIt)
@@ -513,8 +551,17 @@ namespace sofa::component::mapping::nonlinear
       for (auto colIt = rowIt.begin(); colIt != rowIt.end(); ++colIt)
       {
         // retrieve body frame index (centered at CoM) for each body
+        pinocchio::FrameIndex frameIdx;
         const auto jointIdx = colIt.index();
-        const auto &frameIdx = m_bodyCoMFrames[jointIdx];
+        if(jointIdx < m_model->njoints - 1)
+        {
+          frameIdx = m_bodyCoMFrames[jointIdx];
+        }
+        else
+        {
+          frameIdx = m_extraFrames[jointIdx - (m_model->njoints - 1)];
+        }
+        // msg_info() << "==== applyJT jointIdx = " << jointIdx << " / frameIdx = " << frameIdx;
 
         // get jacobian associated to this body
         pinocchio::Data::Matrix6x J = pinocchio::Data::Matrix6x::Zero(6, m_model->nv);
@@ -550,33 +597,34 @@ namespace sofa::component::mapping::nonlinear
           for (auto i = 0ul; i < jointsTorques.size(); ++i)
           {
             const Deriv_t<In> torque(jointsTorques[i]); // InDeriv is Vec1 type
+            msg_info() << "writing row[" << rowIt.index() << "], col[" << i << "]:" << torque;
             outRowIt.addCol(i, torque);
           }
         }
       }
     }
 
-    // // print output matrices
-    // if (m_fromRootModel and outRoot != nullptr)
-    // {
-    //   msg_info() << "outRootWrench CRS matrix:";
-    //     helper::WriteAccessor<DataMatrixDeriv_t<InRoot>> _outRoot(outRoot);
-    //   for (auto rowIt = _outRoot->begin(); rowIt != _outRoot->end(); ++rowIt)
-    //   {
-    //     for (auto colIt = rowIt.begin(); colIt != rowIt.end(); ++colIt)
-    //     {
-    //       msg_info() << "row[" << rowIt.index() << "], col[" << colIt.index() << "]:" << colIt.val();
-    //     }
-    //   }
-    // }
-    // msg_info() << "outTorques CRS matrix:";
-    // for (auto rowIt = _out->begin(); rowIt != _out->end(); ++rowIt)
-    // {
-    //   for (auto colIt = rowIt.begin(); colIt != rowIt.end(); ++colIt)
-    //   {
-    //     msg_info() << "row[" << rowIt.index() << "], col[" << colIt.index() << "]:" << colIt.val();
-    //   }
-    // }
+    // print output matrices
+    if (m_fromRootModel and outRoot != nullptr)
+    {
+      msg_info() << "END outRootWrench CRS matrix:";
+        // helper::WriteAccessor<DataMatrixDeriv_t<InRoot>> _outRoot(outRoot);
+      for (auto rowIt = outRoot->begin(); rowIt != outRoot->end(); ++rowIt)
+      {
+        for (auto colIt = rowIt.begin(); colIt != rowIt.end(); ++colIt)
+        {
+          msg_info() << "row[" << rowIt.index() << "], col[" << colIt.index() << "]:" << colIt.val();
+        }
+      }
+    }
+    msg_info() << "END outTorques CRS matrix:";
+    for (auto rowIt = out->begin(); rowIt != out->end(); ++rowIt)
+    {
+      for (auto colIt = rowIt.begin(); colIt != rowIt.end(); ++colIt)
+      {
+        msg_info() << "row[" << rowIt.index() << "], col[" << colIt.index() << "]:" << colIt.val();
+      }
+    }
   }
 
 } // namespace sofa::component::mapping::nonlinear

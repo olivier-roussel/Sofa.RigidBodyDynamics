@@ -49,6 +49,7 @@ namespace sofa::rigidbodydynamics
     Data<std::string> d_modelDirectory;
     Data<bool> d_useFreeFlyerRootJoint;
     Data<bool> d_addCollision;
+    Data<bool> d_addJointsActuators;
     Data<sofa::type::vector<sofa::type::Vec1d>> d_qRest;
     Data<sofa::type::vector<sofa::type::Vec1d>> d_qInit;
 

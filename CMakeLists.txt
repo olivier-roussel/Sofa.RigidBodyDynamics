@@ -8,6 +8,8 @@ find_package(Sofa.Component.Mass REQUIRED)
 find_package(Sofa.Component.Collision.Geometry REQUIRED)
 find_package(Sofa.GL.Component.Rendering3D REQUIRED)
 
+find_package(SoftRobots.Inverse REQUIRED)
+
 # List all files
 set(SOFA_RBD_SRC_DIR src/sofa/RigidBodyDynamics)
 set(HEADER_FILES
@@ -44,6 +46,7 @@ target_link_libraries(${PROJECT_NAME}
   Sofa.Component.Collision.Geometry
   Sofa.GL.Component.Rendering3D
   pinocchio::pinocchio
+  SoftRobots.Inverse
   )
 
 sofa_create_package_with_targets(

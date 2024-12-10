@@ -4,9 +4,9 @@ import numpy as np
 import pinocchio  # TODO get rid of this
 
 # urdf_file = 'schunk_svh_hand_right.urdf'
-
-urdf_file = 'example-robot-data/robots/ur_description/urdf/ur10_robot.urdf'
-# urdf_file = 'example-robot-data/robots/talos_data/robots/talos_reduced_corrected.urdf'
+# urdf_file = 'simple_arm.urdf'
+# urdf_file = 'example-robot-data/robots/ur_description/urdf/ur10_robot.urdf'
+urdf_file = 'example-robot-data/robots/talos_data/robots/talos_reduced_corrected.urdf'
 # urdf_file = 'example-robot-data/robots/solo_description/robots/solo.urdf'
 # urdf_file = 'example-robot-data/robots/anymal_c_simple_description/urdf/anymal.urdf'
 # urdf_file = 'example-robot-data/robots/romeo_description/urdf/romeo.urdf'
@@ -47,7 +47,9 @@ class Robot:
         # robotWrapperNode.addObject('CGLinearSolver', name='Solver', iterations=200)
         robotWrapperNode.addObject('SparseLDLSolver', template="CompressedRowSparseMatrixMat3x3d")
         robotWrapperNode.addObject('GenericConstraintCorrection')
-        urdfLoader = robotWrapperNode.addObject('URDFModelLoader', name='URDFModelLoader', filename=urdf_full_filename, modelDirectory=model_path, useFreeFlyerRootJoint=useFFRootJoint, printLog=True)
+        urdfLoader = robotWrapperNode.addObject('URDFModelLoader', name='URDFModelLoader', 
+          filename=urdf_full_filename, modelDirectory=model_path, useFreeFlyerRootJoint=useFFRootJoint, 
+          printLog=True, addCollision=False, addJointsActuators=False)
 
         robotNode = robotWrapperNode.getChild('Robot')
         dofs = robotNode.getObject('dofs')
@@ -64,6 +66,12 @@ class Robot:
           rootJointNode = robotWrapperNode.getChild('RootJoint')
           rootJointNode.addObject('RestShapeSpringsForceField', stiffness=1e3, angularStiffness=1e3, points=[0])
 
+
+        modelNode = robotNode.getChild('Model')
+        kinematicChain = modelNode.getObject('kinematicChainMapping')
+        print('==============================================')
+        print(dir(kinematicChain))
+        print('==============================================')
         return robotWrapperNode
 
 

@@ -43,7 +43,8 @@ class Robot:
         robotWrapperNode.addObject('EulerImplicitSolver')
         robotWrapperNode.addObject('SparseLDLSolver', template="CompressedRowSparseMatrixMat3x3d")
         robotWrapperNode.addObject('GenericConstraintCorrection')
-        urdfLoader = robotWrapperNode.addObject('URDFModelLoader', name='URDFModelLoader', filename=urdf_full_filename, modelDirectory=model_path, useFreeFlyerRootJoint=useFFRootJoint, printLog=True)
+        urdfLoader = robotWrapperNode.addObject('URDFModelLoader', name='URDFModelLoader', filename=urdf_full_filename, 
+          modelDirectory=model_path, useFreeFlyerRootJoint=useFFRootJoint, printLog=True)
 
         robotNode = robotWrapperNode.getChild('Robot')
         dofs = robotNode.getObject('dofs')

@@ -25,6 +25,7 @@
 #include <sofa/RigidBodyDynamics/Conversions.h>
 #include <sofa/RigidBodyDynamics/GeometryConversions.h>
 #include <sofa/RigidBodyDynamics/KinematicChainMapping.h>
+#include <SoftRobots.Inverse/component/constraint/JointActuator.h>
 
 #include <sofa/core/ObjectFactory.h>
 #include <sofa/component/mapping/nonlinear/RigidMapping.h>
@@ -40,6 +41,8 @@
 
 #include <pinocchio/parsers/urdf.hpp>
 
+#include <pinocchio/algorithm/default-check.hpp>
+
 using namespace sofa::defaulttype;
 
 using MechanicalObjectVec1 = sofa::component::statecontainer::MechanicalObject<Vec1Types>;
@@ -52,6 +55,7 @@ namespace sofa::rigidbodydynamics
       d_modelDirectory(initData(&d_modelDirectory, "modelDirectory", "Directory containing robot models")),
       d_useFreeFlyerRootJoint(initData(&d_useFreeFlyerRootJoint, false, "useFreeFlyerRootJoint", "True if root joint is a Free Flyer joint, false if none")),
       d_addCollision(initData(&d_addCollision, true, "addCollision", "True if collision detection must be enabled for the robot (self-collision and other objects)")),
+      d_addJointsActuators(initData(&d_addJointsActuators, false, "addJointsActuators", "True if SoftRobots.Inverse actuators objects must be set for each robot joint")),
       d_qRest(initData(&d_qRest, "qRest", "Rest configuration values of robot DoFs")),
       d_qInit(initData(&d_qInit, "qInit", "Initial configuration values of robot DoFs"))
   {
@@ -134,22 +138,32 @@ namespace sofa::rigidbodydynamics
         pinocchio::urdf::buildModel(urdfFilename, *model);
         msg_info() << "Built robot model (with fixed root joint) from URDF file: " << urdfFilename;
       }
+
+      if(not model->check())
+      {
+        msg_warning() << "Model failed checking. URDF model does not comply with pinocchio specifications";
+      }
+      else
+      {
+        msg_info() << "Model checked successfully";
+      }
       msg_info() << "Robot nq = " << model->nq << " / nv = " << model->nv;
-      msg_info() << "Robot njoints = " << model->njoints << " / nbodies = " << model->nbodies << " / nframes = " << model->nframes;
+      msg_info() << "Robot njoints = " << model->njoints << " (incl. \"universe\") / nbodies = " << model->nbodies << " / nframes = " << model->nframes;
       msg_info() << "Robot model 6d gravity g = " << model->gravity;
       msg_info() << "Robot inertias vector size = " << model->inertias.size();
 
       for(auto jointIdx = 0u; jointIdx < model->njoints; ++jointIdx)
       {
-        msg_info() << "Joint[" << jointIdx << "]: " << model->names[jointIdx] << " / " << model->joints[jointIdx];
+        msg_info() << "Joint[" << jointIdx << "] (index = " << model->joints[jointIdx].id() << "): " << model->names[jointIdx] << " / " << model->joints[jointIdx];
       }
 
-      msg_info() << "Adding all frames to kinematic mapping...";
-      for(auto frameIdx = 0u; frameIdx < model->nframes; ++frameIdx)
-      {
-        msg_info() << "Frame[" << frameIdx << "]: " << model->frames[frameIdx].name <<" / parent Joint = " << model->frames[frameIdx].parentJoint << " / parent Frame = " << model->frames[frameIdx].parentFrame;
-        extraFrames.push_back(frameIdx);
-      }
+      // TODO should be configurable to ligthen computations
+      // msg_info() << "Adding all frames (num = " << model->nframes << ") to kinematic mapping...";
+      // for(auto frameIdx = 0u; frameIdx < model->nframes; ++frameIdx)
+      // {
+      //   msg_info() << "Frame[" << frameIdx << "]: " << model->frames[frameIdx].name <<" / parent Joint = " << model->frames[frameIdx].parentJoint << " / parent Frame = " << model->frames[frameIdx].parentFrame;
+      //   extraFrames.push_back(frameIdx);
+      // }
 
       // TODO use collisionModel to create collision nodes in SOFA
       collisionModel = std::make_shared<pinocchio::GeometryModel>();
@@ -161,12 +175,13 @@ namespace sofa::rigidbodydynamics
       // msg_info() << "Built robot visual model from URDF file: " << urdf_filename;
 
       // add a frame for each body centered on its CoM and that will be used as body DoF by SOFA
-      bodyCoMFrames.reserve(model->njoints);
-      for (pinocchio::JointIndex jointIdx = 0; jointIdx < model->njoints; ++jointIdx)
+      for (pinocchio::JointIndex jointIdx = 1; jointIdx < model->njoints; ++jointIdx)
       {
-        const pinocchio::SE3 bodyCoM_i = pinocchio::SE3(Eigen::Matrix3d::Identity(), model->inertias[jointIdx].lever());
+        // const pinocchio::SE3 bodyCoM_i = pinocchio::SE3::Identity();
+        const pinocchio::SE3 bodyCoM_i = pinocchio::SE3(Eigen::Matrix3d::Identity(), model->inertias[jointIdx+1].lever());
         const auto bodyFrameCoM = pinocchio::Frame{"Body_" + std::to_string(jointIdx) + "_CoM", jointIdx, bodyCoM_i, pinocchio::FrameType::OP_FRAME};
         bodyCoMFrames.push_back(model->addFrame(bodyFrameCoM));
+        msg_info() << "==== bodyCoMFrames[" << jointIdx << "]: " << bodyCoMFrames.back();
       }
     }
     catch (std::exception &e)
@@ -203,7 +218,45 @@ namespace sofa::rigidbodydynamics
     jointsDofs->x.setParent(&d_qInit);
     // set rest position specified from \"qRest\" data field
     jointsDofs->x0.setParent(&d_qRest);
+
+    jointsDofs->setTranslation(0., 0., 2.); // XXX
     robotNode->addObject(jointsDofs);
+
+
+    if(d_addJointsActuators.getValue() == true)
+    {
+      for(auto jointIdx = 0; jointIdx < model->njoints - 1; ++jointIdx)
+      {
+        // revolute joint case
+        const auto& joint = model->joints[jointIdx + 1];
+        msg_info() << "** joint[" << jointIdx + 1 << "]: " << joint.classname() << " / shortname: " << joint.shortname();
+        if(joint.shortname().rfind("JointModelR", 0) == 0)
+        {
+          // const int jointConfigIndex = joint.idx_q(); // here we know that this type of joint is only described by one parameter
+          // msg_info() << "**** joint[" << jointIdx + 1 << "]: jointConfigIndex" << jointConfigIndex;
+          // if(jointConfigIndex < 0)
+          // {
+          //   continue;
+          // }
+          const auto jointActuator = New<softrobotsinverse::constraint::JointActuator<sofa::defaulttype::Vec1Types>>();
+          jointActuator->setName("actuator_" + model->names[jointIdx + 1]);
+          jointActuator->d_index = jointIdx;
+          // jointActuator->d_minAngle = model->lowerPositionLimit[jointConfigIndex];
+          // jointActuator->d_maxAngle = model->upperPositionLimit[jointConfigIndex];
+          jointActuator->d_minAngle = -3.14;
+          jointActuator->d_maxAngle = 3.14;
+          jointActuator->d_maxAngleVariation = 0.005; // TODO
+          robotNode->addObject(jointActuator);
+          msg_info() << "****** added joint actuator for joint[" << jointIdx + 1 << "] (name = "<< model->names[jointIdx + 1] << " with index = " << jointActuator->d_index;
+        }
+        else
+        {
+          msg_error() << "Unsupported type of joint actuator: " << joint.shortname();
+          d_componentState.setValue(sofa::core::objectmodel::ComponentState::Invalid);
+          return false;
+        }
+      }
+    }
 
     const auto modelNode = robotNode->createChild("Model");
 
@@ -222,10 +275,10 @@ namespace sofa::rigidbodydynamics
     // one dof container for all joints and extra frames
     const auto mappedDof = New<MechanicalObjectRigid3>();
     mappedDof->setName("mappedDof");
-    mappedDof->resize(model->njoints + extraFrames.size());
+    mappedDof->resize(model->njoints - 1 + extraFrames.size());
     modelNode->addObject(mappedDof);
 
-    kinematicChainMapping->addOutputModel(mappedDof.get(), mappedDof->getPathName());
+    kinematicChainMapping->addOutputModel(mappedDof.get());
 
     modelNode->addObject(kinematicChainMapping);
 
@@ -233,13 +286,13 @@ namespace sofa::rigidbodydynamics
     const auto jointsNode = robotNode->createChild("Joints");
     const auto jointsDof = New<MechanicalObjectRigid3>();
     jointsDof->setName("jointsDof");
-    jointsDof->resize(model->njoints);
+    jointsDof->resize(model->njoints - 1);
     jointsNode->addObject(jointsDof);
     const auto jointsMapping = New<sofa::component::mapping::nonlinear::RigidMapping<Rigid3Types, Rigid3Types>>();
     jointsMapping->setName("jointsMapping");
     jointsMapping->setModels(mappedDof.get(), jointsDof.get());
     std::vector<unsigned int> jointsDofIndexes;
-    for(auto i = 0; i < model->njoints; ++i)
+    for(auto i = 0; i < model->njoints - 1; ++i)
     {
       jointsDofIndexes.push_back(i);
     }
@@ -259,7 +312,7 @@ namespace sofa::rigidbodydynamics
     std::vector<unsigned int> framesDofIndexes;
     for(auto i = 0; i < extraFrames.size(); ++i)
     {
-      framesDofIndexes.push_back(model->njoints + i);
+      framesDofIndexes.push_back(model->njoints - 1 + i);
       // create a node + submapping for each frame
       const auto& frame = model->frames[extraFrames[i]];
       const auto frameNode = framesNode->createChild(frame.name);
@@ -293,16 +346,17 @@ namespace sofa::rigidbodydynamics
       kinematicChainMapping->addInputModel2(rootJointDof.get());
     }
 
-    msg_info() << "-- model->nbodies" << model->nbodies;
-    msg_info() << "-- model->njoints" << model->njoints;
+    msg_info() << "-- pinocchio model->nbodies: " << model->nbodies;
+    msg_info() << "-- pinocchio model->njoints: " << model->njoints;
 
-    for (pinocchio::JointIndex jointIdx = 0; jointIdx < model->njoints; ++jointIdx)
+    for (pinocchio::JointIndex jointIdx = 0; jointIdx < model->njoints - 1; ++jointIdx)
     {
-      msg_info() << "-- joint " << jointIdx;
-      msg_info() << "-- joint name " << model->names[jointIdx];
-      const auto jointNode = jointsNode->createChild(model->names[jointIdx]);
+      msg_info() << "-- joint " << jointIdx + 1;
+      msg_info() << "-- joint name " << model->names[jointIdx + 1];
+      msg_info() << "-- joint shortname " << model->joints[jointIdx + 1].shortname();
 
-      const auto& jointInertia = model->inertias[jointIdx];
+      const auto jointNode = jointsNode->createChild(model->names[jointIdx + 1]);
+      const auto& jointInertia = model->inertias[jointIdx + 1];
 
       const auto bodyRigid = New<MechanicalObjectRigid3>();
       bodyRigid->setName("jointRigid");
@@ -314,10 +368,38 @@ namespace sofa::rigidbodydynamics
       bodyMass->setName("mass");
       sofa::defaulttype::Rigid3dMass rigidMass;
       rigidMass.mass = jointInertia.mass();
-      msg_info() << "-- mass = " << jointInertia.mass();
+      const Eigen::Matrix3d massInertia = jointInertia.inertia().matrix();
+      const Eigen::Matrix3d inertiaDivByMass = massInertia / jointInertia.mass();
 
-      rigidMass.inertiaMatrix = sofa::rigidbodydynamics::mat3ToSofaType(jointInertia.inertia().matrix());
+      rigidMass.inertiaMatrix = sofa::rigidbodydynamics::mat3ToSofaType(inertiaDivByMass);
       rigidMass.volume = 1.; // XXX: should not be used here as we only deal with rigid bodies, so we should be able to set any value
+
+      // if(jointInertia.mass() == 0.)
+      // {
+      //   // XXX
+      //   msg_warning() << "Joint " << model->names[jointIdx] << " has a null mass associated to it. Setting it to one instead...";
+      //   rigidMass.mass = 1.;
+      // } else {
+      //   rigidMass.mass = jointInertia.mass();
+      // }
+
+      msg_info() << "-- inertia matrix (sofa) = " << rigidMass.inertiaMatrix;
+      msg_info() << "----- det = " << determinant(rigidMass.inertiaMatrix);
+      
+      type::Mat<3,3,double> invMat;
+      type::Mat<3,3,double> inertiaMassMat = rigidMass.inertiaMatrix * rigidMass.mass;
+      if(not invMat.invert(inertiaMassMat))
+      {
+        msg_warning() << "Mass inertia matrix is not invertible due to too low mass and/or inertia and lack of numeric precision, regularizing inertia by scaling...";
+        rigidMass.inertiaMatrix = rigidMass.inertiaMatrix * 10;
+
+        msg_info() << "-- after regul: inertiaMassMat (sofa) = " << inertiaMassMat;
+        msg_info() << "----- det = " << determinant(inertiaMassMat);
+        // msg_error() << "Failed to invert inertia mass matrix of joint[" << jointIdx << "]: " << model->names[jointIdx];
+        // d_componentState.setValue(sofa::core::objectmodel::ComponentState::Invalid);
+        // return false;
+      }
+
       rigidMass.recalc();
       bodyMass->setMass(rigidMass);
       jointNode->addObject(bodyMass);
@@ -334,7 +416,7 @@ namespace sofa::rigidbodydynamics
 
       // get joint associated visual geometries
       const auto visualData = std::make_shared<pinocchio::GeometryData>(*visualModel);
-      const auto visualGeomIndexesIt = visualData->innerObjects.find(jointIdx);
+      const auto visualGeomIndexesIt = visualData->innerObjects.find(jointIdx + 1);
       if (visualGeomIndexesIt != visualData->innerObjects.end())
       {
         for (const auto &geomIdx : visualGeomIndexesIt->second)
@@ -352,7 +434,8 @@ namespace sofa::rigidbodydynamics
           {
             msg_error() << "Failed to convert pinocchio FCL visual geometry to Sofa MeshTopology";
             msg_error() << "FCL geometry object type: " << static_cast<int>(geom.geometry->getObjectType()) << ", FCL geometry node type: " << static_cast<int>(geom.geometry->getNodeType());
-            continue;
+            d_componentState.setValue(sofa::core::objectmodel::ComponentState::Invalid);
+            return false;
           }
           visualBodyNode->addObject(visualBodyMesh);
 
@@ -379,7 +462,7 @@ namespace sofa::rigidbodydynamics
       {
         const auto collisionNode = jointNode->createChild("Collision");
         const auto collisionData = std::make_shared<pinocchio::GeometryData>(*collisionModel);
-        const auto collisionGeomIndexesIt = collisionData->innerObjects.find(jointIdx);
+        const auto collisionGeomIndexesIt = collisionData->innerObjects.find(jointIdx + 1);
         if (collisionGeomIndexesIt != collisionData->innerObjects.end())
         {
           for (const auto &geomIdx : collisionGeomIndexesIt->second)
@@ -393,7 +476,8 @@ namespace sofa::rigidbodydynamics
             {
               msg_error() << "Failed to convert pinocchio FCL collision geometry to Sofa MeshTopology";
               msg_error() << "FCL geometry object type: " << static_cast<int>(geom.geometry->getObjectType()) << ", FCL geometry node type: " << static_cast<int>(geom.geometry->getNodeType());
-              continue;
+              d_componentState.setValue(sofa::core::objectmodel::ComponentState::Invalid);
+              return false;
             }
             collisionBodyNode->addObject(collisionBodyMesh);
 
