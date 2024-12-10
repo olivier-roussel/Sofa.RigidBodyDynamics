@@ -10,25 +10,30 @@ urdf_file = 'schunk_svh_hand_right.urdf'
 urdf_full_filename = os.path.join(urdf_model_path, urdf_file)
 
 # initial hand configuration where it grasps the deformable object using three fingers (index, pinky and thumb)
-q_init = [1.77504127, 0.09653007, 0.71874946, 0.43479601, 0.55803321, 0.40834981,
-          0.93302468, 0.43272676, 0.10179832, 0.02525507, 0.6260015,  0.29479257,
-          0.11705754, 0.,         0.,         0.,         0.,         0.,
+
+q_init = [1.77736181, 0.09626184, 0.71877442, 0.43485226, 0.55710469, 0.40919228,
+          0.93233217, 0.43232146, 0.,         0.,         0.,         0.10067708,
+          0.02485863, 0.62568506, 0.29532192, 0.11736043, 0.,         0.,
           0.,         0.        ]
+
 
 q_rest = [0] * len(q_init)
 
 # scale = 100 : initial scene description in cm
 scale = 1
 
-goal_positions = np.array([[0.06, 0.077, 0.12],
-                           [0.06, 0.017, 0.177],
-                           [0.06, -0.053, 0.12],
-                           [0.06, 0.017, 0.12]]) * scale
+def tfCoords(c):
+  return np.array([c[0], c[1], c[2]])
 
-effector_positions = np.array([[0.05, 0.077, 0.12],
-                               [0.08, 0.017, 0.157],
-                               [0.05, -0.053, 0.12],
-                               [0.05, 0.017, 0.12]]) * scale
+goal_positions = np.array([tfCoords([0.06, 0.077, 0.12]),
+                           tfCoords([0.06, 0.017, 0.177]),
+                           tfCoords([0.06, -0.053, 0.12]),
+                           tfCoords([0.06, 0.017, 0.12])]) * scale
+
+effector_positions = np.array([tfCoords([0.05, 0.077, 0.12]),
+                               tfCoords([0.08, 0.017, 0.157]),
+                               tfCoords([0.05, -0.053, 0.12]),
+                               tfCoords([0.05, 0.017, 0.12])]) * scale
 
 finger_thumb_tip_frame_name = 'thtip'
 finger_index_tip_frame_name = 'fftip'
@@ -54,7 +59,7 @@ def createScene(rootNode):
 
     # rootNode.findData('gravity').value = [0, 0, 0]
     rootNode.findData('gravity').value = [9.81 * scale, 0, 0]
-    # rootNode.findData('gravity').value = [0, 0, -9.81]
+    # rootNode.findData('gravity').value = [0, 9.81 * scale, 0]
     rootNode.findData('dt').value = 0.01
 
     rootNode.addObject('FreeMotionAnimationLoop')
@@ -85,8 +90,9 @@ def createScene(rootNode):
     ##########################################
     # FEM Model                              #
     ##########################################
-    modelTranslation = [0.014 * scale, 0.01 * scale, 0.014 * scale]
-    modelRotation = pin.rpy.matrixToRpy(pin.utils.rotate('z', math.pi*0.5) @ pin.utils.rotate('x', math.pi*0.5))
+    modelTranslation = tfCoords([0.014 * scale, 0.01 * scale, 0.014 * scale])
+    modelRotation = pin.rpy.matrixToRpy(pin.utils.rotate('z', math.pi * 0.5) @ pin.utils.rotate('x', math.pi*0.5))
+    # modelRotation = pin.rpy.matrixToRpy(pin.utils.rotate('z', math.pi) @ pin.utils.rotate('x', math.pi*0.5))
     modelRotationDegrees = [i * 180. / math.pi for i in modelRotation]
     model = rootNode.addChild('model')
     model.addObject('EulerImplicitSolver')
@@ -136,117 +142,60 @@ def createScene(rootNode):
     modelContact.addObject('PointCollisionModel', group=1)
     modelContact.addObject('BarycentricMapping')
 
+    # #########################################
+    # # HAND                                   #
+    # #########################################
+
+     # hand robot node
+    handNode = rootNode.addChild('hand')
+    handNode.addObject('EulerImplicitSolver')
+    # handNode.addObject('CGLinearSolver', name='Solver', iterations=200)
+    handNode.addObject('SparseLDLSolver', template="CompressedRowSparseMatrixMat3x3d")
+    handNode.addObject('GenericConstraintCorrection')
+    urdfLoader = handNode.addObject('URDFModelLoader', name='URDFModelLoader', filename=urdf_full_filename, 
+      modelDirectory=urdf_model_path, useFreeFlyerRootJoint=False, printLog=True, qInit=q_init,
+      addCollision=False, addJointsActuators=True)
+
+
     ##########################################
-    # HAND                                   #
+    # FINGERS CONTACT                        #
     ##########################################
 
-    #  # hand robot node
-    # handNode = rootNode.addChild('hand')
-    # handNode.addObject('EulerImplicitSolver')
-    # # handNode.addObject('CGLinearSolver', name='Solver', iterations=200)
-    # handNode.addObject('SparseLDLSolver', template="CompressedRowSparseMatrixMat3x3d")
-    # handNode.addObject('GenericConstraintCorrection')
-    # urdfLoader = handNode.addObject('URDFModelLoader', name='URDFModelLoader', filename=urdf_full_filename, 
-    #   modelDirectory=urdf_model_path, useFreeFlyerRootJoint=False, printLog=True, qInit=q_init)
+    # display the 3 actuated fingers frames
+    robotNode = handNode.getChild('Robot')
+    framesNode = robotNode.getChild('Frames')
 
 
-    # ##########################################
-    # # FINGERS CONTACT                        #
-    # ##########################################
+    # 0.045 0.05 0.15
+    fftipFrameNode = framesNode.getChild(finger_index_tip_frame_name)
+    fftipFrameNode.getObject('dof').showObject = True
+    fftipFrameNode.getObject('dof').showObjectScale = 0.01
 
-    # # display the 3 actuated fingers frames
-    # robotNode = handNode.getChild('Robot')
-    # framesNode = robotNode.getChild('Frames')
+    # 0.045 -0.04 0.15
+    lftipFrameNode = framesNode.getChild(finger_pinky_tip_frame_name)
+    lftipFrameNode.getObject('dof').showObject = True
+    lftipFrameNode.getObject('dof').showObjectScale = 0.01
 
-    # # 0.08 0.01 0.12
-    # thtipFrameNode = framesNode.getChild(finger_thumb_tip_frame_name)
-    # thtipFrameNode.getObject('dof').showObject = True
-    # thtipFrameNode.getObject('dof').showObjectScale = 0.01
+      # 0.08 0.01 0.12
+    thtipFrameNode = framesNode.getChild(finger_thumb_tip_frame_name)
+    thtipFrameNode.getObject('dof').showObject = True
+    thtipFrameNode.getObject('dof').showObjectScale = 0.01
     
-    # # 0.045 0.05 0.15
-    # fftipFrameNode = framesNode.getChild(finger_index_tip_frame_name)
-    # fftipFrameNode.getObject('dof').showObject = True
-    # fftipFrameNode.getObject('dof').showObjectScale = 0.01
 
-    # # 0.045 -0.04 0.15
-    # lftipFrameNode = framesNode.getChild(finger_pinky_tip_frame_name)
-    # lftipFrameNode.getObject('dof').showObject = True
-    # lftipFrameNode.getObject('dof').showObjectScale = 0.01
-
-    ##########################################
-    # FINGERS ACTUATION                      #
-    ##########################################
-
-    ##########################################
-    # FEM Model                              #
-    ##########################################
-
-    fftip_pos = [0.045 * scale, 0.05 * scale, 0.15 * scale]
-    lftip_pos = [0.045 * scale, -0.04 * scale, 0.15 * scale]
-    thtip_pos = [0.08 * scale, 0.01 * scale, 0.12 * scale]
-
-    fingers = rootNode.addChild('fingers')
-    fingers.addObject('EulerImplicitSolver', name='odesolver', rayleighMass=0., rayleighStiffness=0.)
-    fingers.addObject('SparseLDLSolver', template="CompressedRowSparseMatrix")
-    # fingers.addObject('MechanicalObject', template="Rigid3", position=[[2, 15, 4.5, 0, 0, 0, 1], [-7, 15, 4.5, 0, 0, 0, 1],	[-2, 12, 8, 0, 0, 0, 1]], 
-    fingers.addObject('MechanicalObject', template="Rigid3", position=[fftip_pos + [0, 0, 0, 1], lftip_pos + [0, 0, 0, 1],	thtip_pos + [0, 0, 0, 1]], 
-                      showObject=True, showObjectScale=0.01 * scale)
-    fingers.addObject('UniformMass', name="failing", totalMass=0.005)
-    fingers.addObject('RestShapeSpringsForceField', points=[0, 1, 2], stiffness=0.01, angularStiffness=1e12)
-    fingers.addObject('LinearSolverConstraintCorrection')
-
-
-    ##########################################
-    # Actuation                              #
-    ##########################################
-
-    maxDispVariation = 0.0009 * scale
-
-    fingersActuation = fingers.addChild('actuation')
-    fingersActuation.addObject('MechanicalObject', position=[[0, 0, 0], [0, 0, 0], [0, 0, 0]], rest_position=[fftip_pos, lftip_pos, thtip_pos])
-
-    fingersActuation.addObject('SlidingActuator', indices=0, direction=[1, 0, 0], maxDispVariation=maxDispVariation, showDirection=1, showVisuScale=0.02 * scale)
-    fingersActuation.addObject('SlidingActuator', indices=0, direction=[0, 0, 1], maxDispVariation=maxDispVariation, showDirection=1, showVisuScale=0.02 * scale)
-
-    fingersActuation.addObject('SlidingActuator', indices=1, direction=[1, 0, 0], maxDispVariation=maxDispVariation, showDirection=1, showVisuScale=0.02 * scale)
-    fingersActuation.addObject('SlidingActuator', indices=1, direction=[0, 0, 1], maxDispVariation=maxDispVariation, showDirection=1, showVisuScale=0.02 * scale)
-
-    fingersActuation.addObject('SlidingActuator', indices=2, direction=[1, 0, 0], maxDispVariation=maxDispVariation, showDirection=1, showVisuScale=0.02 * scale)
-    fingersActuation.addObject('SlidingActuator', indices=2, direction=[0, 1, 0], maxDispVariation=maxDispVariation, showDirection=1, showVisuScale=0.02 * scale, maxForce=0.001 * scale)
-    fingersActuation.addObject('SlidingActuator', indices=2, direction=[0, 0, 1], maxDispVariation=maxDispVariation, showDirection=1, showVisuScale=0.02 * scale)
-
-    fingersActuation.addObject('RigidMapping', input="@..", mapMasses=False, mapForces=False, rigidIndexPerPoint=[0, 1, 2])
-
-    ##########################################
-    # Contact                                #
-    ##########################################
-
-    fingersContact1 = fingers.addChild('contact1')
+    fingersContact1 = fftipFrameNode.addChild('contact1')
     fingersContact1.addObject('MechanicalObject')
     fingersContact1.addObject('SphereCollisionModel', radius=0.008 * scale, group=2)
-    fingersContact1.addObject('RigidMapping' ,input="@..", index=0)
-    tipArt1 = fingers.addChild('tipArt1')
-    tipArt1.addObject('MechanicalObject')
-    # tipArt1.addObject('MechanicalObject', translation=[0, 1, -1])
-    tipArt1.addObject('RigidMapping', input="@..", index=0)
+    fingersContact1.addObject('RigidMapping', template='Rigid,Vec3d', input="@..", index=0)
 
-    fingersContact2 = fingers.addChild('contact2')
+    fingersContact2 = lftipFrameNode.addChild('contact2')
     fingersContact2.addObject('MechanicalObject', scale=0.1 * scale)
     fingersContact2.addObject('SphereCollisionModel', radius=0.008 * scale, group=2)
-    fingersContact2.addObject('RigidMapping' ,input="@..", index=1)
-    tipArt2 = fingers.addChild('tipArt2')
-    tipArt2.addObject('MechanicalObject')
-    # tipArt2.addObject('MechanicalObject', translation=[0, 0., -1.5])
-    tipArt2.addObject('RigidMapping', input="@..", index=1)
-
-    fingersContact3 = fingers.addChild('contact3')
+    fingersContact2.addObject('RigidMapping', template='Rigid,Vec3d', input="@..", index=0)
+ 
+    fingersContact3 = thtipFrameNode.addChild('contact3')
     fingersContact3.addObject('MechanicalObject', scale=0.1 * scale)
     fingersContact3.addObject('SphereCollisionModel', radius=0.008 * scale, group=2)
-    fingersContact3.addObject('RigidMapping' ,input="@..", index=2)
-    tipArt3 = fingers.addChild('tipArt3')
-    tipArt3.addObject('MechanicalObject')
-    # tipArt3.addObject('MechanicalObject', translation=[1.2, -1.8, 0.])
-    tipArt3.addObject('RigidMapping', input="@..", index=2)
-    
+    fingersContact3.addObject('RigidMapping', template='Rigid,Vec3d', input="@..", index=0)
+
 
     return rootNode

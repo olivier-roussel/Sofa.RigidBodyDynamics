@@ -220,12 +220,18 @@
       </geometry>
     </collision>
 
-  <inertial>
+  <!-- <inertial>
     <mass value="0.02383"/>
     <origin xyz="0.003634 0.000206 -0.09885"/>
     <inertia ixx="0.00021" ixy="-0.0" ixz="-1e-05" iyy="0.00011" iyz="-0.0" izz="0.00019"/>
+  </inertial>   -->
+  <!-- Initial values make the inertia mass matrix not invertible as below floating point precision 
+  for determinant, so we assume a default regularized version... -->
+  <inertial>
+    <mass value="0.02383" />
+      <origin xyz="0.003634 0.000206 -0.09885"/>
+    <inertia ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.001" iyz="0.0" izz="0.001" />
   </inertial>
-
   </link>
 
   <link name="right_hand_l">
@@ -275,11 +281,19 @@
         <mesh filename="meshes/v2/f13.obj"/>
       </geometry>
     </collision>
-    <inertial>
+    <!-- <inertial>
       <mass value="0.0324"/>
       <origin xyz="0.102924 0.000592 0.0"/>
       <inertia ixx="9e-05" ixy="-1e-05" ixz="-0.0" iyy="0.00017" iyz="0.0" izz="0.00017"/>
     </inertial>
+  </inertial>  -->
+  <!-- Initial values make the inertia mass matrix not invertible as below floating point precision 
+  for determinant, so we assume a default regularized version... -->
+  <inertial>
+    <mass value="0.0324" />
+    <origin xyz="0.102924 0.000592 0.0"/>
+    <inertia ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.001" iyz="0.0" izz="0.001" />
+  </inertial>    
   </link>
 
   <!-- MIDDLE FINGER LINKS -->
@@ -296,12 +310,18 @@
         <mesh filename="meshes/v2/f20.obj"/>
       </geometry>
     </collision>    
-    <inertial>
+    <!-- <inertial>
       <mass value="0.02377"/>
       <origin xyz="0.003357 -8e-06 -0.099643"/>
       <inertia ixx="0.00021" ixy="-0.0" ixz="-1e-05" iyy="0.00011" iyz="0.0" izz="0.00019"/>
-    </inertial>
- 
+    </inertial> -->
+    <!-- Initial values make the inertia mass matrix not invertible as below floating point precision 
+    for determinant, so we assume a default regularized version... -->
+    <inertial>
+      <mass value="0.02377" />
+      <origin xyz="0.003357 -8e-06 -0.099643"/>
+      <inertia ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.001" iyz="0.0" izz="0.001" />
+    </inertial>        
   </link>
 
   <link name="right_hand_k">
@@ -351,11 +371,18 @@
         <mesh filename="meshes/v2/f23.obj"/>
       </geometry>
     </collision>    
-    <inertial>
+    <!-- <inertial>
       <mass value="0.03239"/>
       <origin xyz="0.102794 0.00042 0.0"/>
       <inertia ixx="9e-05" ixy="-1e-05" ixz="0.0" iyy="0.00017" iyz="0.0" izz="0.00017"/>
-    </inertial>
+    </inertial>  -->
+    <!-- Initial values make the inertia mass matrix not invertible as below floating point precision 
+    for determinant, so we assume a default regularized version... -->
+    <inertial>
+      <mass value="0.03239" />
+      <origin xyz="0.102794 0.00042 0.0"/>
+      <inertia ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.001" iyz="0.0" izz="0.001" />
+    </inertial>      
   </link>
 
   <!-- RING FINGER LINKS -->
@@ -372,11 +399,18 @@
         <mesh filename="meshes/v2/f30.obj"/>
       </geometry>
     </collision>    
-    <inertial>
+    <!-- <inertial>
       <mass value="0.02377"/>
       <origin xyz="0.003805 0.000386 0.100079"/>
       <inertia ixx="0.00021" ixy="0.0" ixz="1e-05" iyy="0.00011" iyz="-0.0" izz="0.00019"/>
-    </inertial>  
+    </inertial> -->
+    <!-- Initial values make the inertia mass matrix not invertible as below floating point precision 
+    for determinant, so we assume a default regularized version... -->
+    <inertial>
+      <mass value="0.02377" />
+      <origin xyz="0.003805 0.000386 0.100079"/>
+      <inertia ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.001" iyz="0.0" izz="0.001" />
+    </inertial>         
   </link>
 
   <link name="right_hand_j">
@@ -426,11 +460,18 @@
         <mesh filename="meshes/v2/f33.obj"/>
       </geometry>
     </collision>
-    <inertial>
+    <!-- <inertial>
       <mass value="0.03229"/>
       <origin xyz="0.102676 0.000301 0.0"/>
       <inertia ixx="9e-05" ixy="-1e-05" ixz="0.0" iyy="0.00017" iyz="-0.0" izz="0.00017"/>
-    </inertial>
+    </inertial> -->
+    <!-- Initial values make the inertia mass matrix not invertible as below floating point precision 
+    for determinant, so we assume a default regularized version... -->
+    <inertial>
+      <mass value="0.03229"/>
+      <origin xyz="0.102676 0.000301 0.0"/>
+      <inertia ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.001" iyz="0.0" izz="0.001" />
+    </inertial>    
   </link>
 
   <!-- LITTLE FINGER LINKS -->
@@ -447,10 +488,17 @@
         <mesh filename="meshes/v2/f40.obj"/>
       </geometry>
     </collision>
-    <inertial>
+    <!-- <inertial>
       <mass value="0.02377"/>
       <origin xyz="0.003653 4.4e-05 0.100085"/>
       <inertia ixx="0.00021" ixy="0.0" ixz="1e-05" iyy="0.00011" iyz="-0.0" izz="0.00019"/>
+    </inertial> -->
+    <!-- Initial values make the inertia mass matrix not invertible as below floating point precision 
+    for determinant, so we assume a default regularized version... -->
+    <inertial>
+      <mass value="0.02377" />
+      <origin xyz="0.003653 4.4e-05 0.100085"/>
+      <inertia ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.001" iyz="0.0" izz="0.001" />
     </inertial>
   </link>
 
@@ -483,11 +531,18 @@
         <mesh filename="meshes/v2/f42.obj"/>
       </geometry>
     </collision>
-    <inertial>
+    <!-- <inertial>
       <mass value="0.02488"/>
       <origin xyz="0.119665 -0.009328 0.0"/>
       <inertia ixx="0.00013" ixy="-0.0" ixz="-0.0" iyy="0.00023" iyz="0.0" izz="0.00016"/>
-    </inertial>
+    </inertial> -->
+    <!-- Initial values make the inertia mass matrix not invertible as below floating point precision 
+    for determinant, so we assume a default regularized version... -->
+    <inertial>
+      <mass value="0.02488" />
+      <origin xyz="0.119665 -0.009328 0.0"/>
+      <inertia ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.001" iyz="0.0" izz="0.001" />
+    </inertial>    
   </link>
 
   <link name="right_hand_q">
@@ -501,11 +556,18 @@
         <mesh filename="meshes/v2/f43.obj"/>
       </geometry>
     </collision>
-    <inertial>
+    <!-- <inertial>
       <mass value="0.03234"/>
       <origin xyz="0.102896 0.000307 0.0"/>
       <inertia ixx="9e-05" ixy="-1e-05" ixz="-0.0" iyy="0.00017" iyz="0.0" izz="0.00017"/>
-    </inertial>      
+    </inertial> -->
+    <!-- Initial values make the inertia mass matrix not invertible as below floating point precision 
+    for determinant, so we assume a default regularized version... -->
+    <inertial>
+      <mass value="0.03234" />
+      <origin xyz="0.102896 0.000307 0.0"/>
+      <inertia ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.001" iyz="0.0" izz="0.001" />
+    </inertial>        
   </link>
 
   <joint name="right_hand_Thumb_Flexion" type="revolute">
