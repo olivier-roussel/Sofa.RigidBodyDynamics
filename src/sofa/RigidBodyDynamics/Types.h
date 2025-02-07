@@ -21,51 +21,14 @@
  ******************************************************************************/
 #pragma once
 
-#include <sofa/RigidBodyDynamics/config.h>
-
-#include <sofa/core/objectmodel/BaseObject.h>
-
-#include <pinocchio/multibody/model.hpp>
-#include <pinocchio/multibody/geometry.hpp>
+#include <coal/shape/geometric_shapes.h>
+#include <pinocchio/spatial/se3.hpp>
+#include <sofa/component/topology/container/constant/MeshTopology.h>
 
 namespace sofa::rigidbodydynamics
 {
+  typedef std::size_t JointIndex;
 
-  using namespace core::objectmodel;
+  static const int kSkipUniverse = 0; // Debugging
 
-  class SOFA_RIGIDBODYDYNAMICS_API RobotWrapper : public BaseObject
-  {
-  public:
-    SOFA_CLASS(RobotWrapper, BaseObject);
-
-    void init() override;
-
-    void reinit() override;
-
-    void reset() override;
-
-    const std::shared_ptr<pinocchio::Model>& model() const
-    {
-        return m_model;
-    }
-    const std::shared_ptr<pinocchio::GeometryModel>& collisionModel() const
-    {
-        return m_collision_model;
-    }
-    const std::shared_ptr<pinocchio::GeometryModel>& visualModel() const
-    {
-        return m_visual_model;
-    }
-
-  private:
-    RobotWrapper();
-
-    std::shared_ptr<pinocchio::Model> m_model;
-    std::shared_ptr<pinocchio::GeometryModel> m_collision_model;
-    std::shared_ptr<pinocchio::GeometryModel> m_visual_model;
-    // bool canLoad();
-
-    // bool load();
-  };
-
-} /// namespace sofa::rigidbodydynamics
+} // namespace sofa::rigidbodydynamics

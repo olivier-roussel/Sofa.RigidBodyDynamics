@@ -24,6 +24,8 @@
 
 #include <sofa/RigidBodyDynamics/KinematicChainMapping.h>
 
+#include <sofa/RigidBodyDynamics/Types.h>
+
 #include <sofa/RigidBodyDynamics/Conversions.h>
 #include <sofa/core/objectmodel/BaseContext.h>
 #include <sofa/core/visual/VisualParams.h>
@@ -35,6 +37,7 @@
 #include <pinocchio/algorithm/frames.hpp>
 
 using namespace sofa::defaulttype;
+using namespace sofa::rigidbodydynamics;
 
 namespace {
   constexpr auto kMinTorque = 1.e-6;
@@ -343,18 +346,20 @@ namespace sofa::component::mapping::nonlinear
     if (d_componentState.getValue() == sofa::core::objectmodel::ComponentState::Invalid)
       return;
 
+    const int num_joints = m_model->njoints - kSkipUniverse; // if we do not want universe joint
+
     // msg_info() << "========= KinematicChainMapping apply entering...";
 
     Eigen::VectorXd q = Eigen::VectorXd::Zero(m_model->nq);
     if (m_fromRootModel and inRoot != nullptr)
     {
       const sofa::defaulttype::RigidCoord<3, double> &rootPose_w = (*inRoot)[d_indexFromRoot.getValue()];
-      q.head<7>() = sofa::rigidbodydynamics::se3ToEigen(rootPose_w);
-      q.tail((*in).size()) = sofa::rigidbodydynamics::vectorVec1ToEigen(*in, m_model->nq);
+      q.head<7>() = se3ToEigen(rootPose_w);
+      q.tail((*in).size()) = vectorVec1ToEigen(*in, m_model->nq);
     }
     else
     {
-      q = sofa::rigidbodydynamics::vectorVec1ToEigen(*in, m_model->nq);
+      q = vectorVec1ToEigen(*in, m_model->nq);
     }
 
     // Computes joints Jacobians and forward kinematics. Jacobians will
@@ -371,13 +376,13 @@ namespace sofa::component::mapping::nonlinear
     // msg_info() << " frames placements updated";
 
     // Single output vector of size njoints + number of extra frames
-    assert((*out).size() == (m_model->njoints - 1 + m_extraFrames.size()));
+    assert((*out).size() == (num_joints + m_extraFrames.size()));
 
     // Write joints
-    for (auto jointIdx = 0ul; jointIdx < m_model->njoints - 1; ++jointIdx)
+    for (JointIndex jointIdx = 0ul; jointIdx < num_joints; ++jointIdx)
     {
       const auto &frameIdx = m_bodyCoMFrames[jointIdx];
-      (*out)[jointIdx] = sofa::rigidbodydynamics::se3ToSofaType(m_data->oMf[frameIdx]);
+      (*out)[jointIdx] = se3ToSofaType(m_data->oMf[frameIdx]);
     }
     
     // Write frames
@@ -386,7 +391,7 @@ namespace sofa::component::mapping::nonlinear
       const auto &frameIdx = m_extraFrames[i];
       // msg_info() << "out.size = " << (*out).size() << " / index = " << i + m_model->njoints - 1 << " / i = " << i;
       // msg_info() << "m_data->oMf.size = " << m_data->oMf.size() << " / frameIdx = " << frameIdx;
-      (*out)[i + m_model->njoints - 1] = sofa::rigidbodydynamics::se3ToSofaType(m_data->oMf[frameIdx]);
+      (*out)[i + num_joints] = se3ToSofaType(m_data->oMf[frameIdx]);
     }
   }
 
@@ -401,6 +406,8 @@ namespace sofa::component::mapping::nonlinear
     if (d_componentState.getValue() == sofa::core::objectmodel::ComponentState::Invalid)
       return;
 
+    const int num_joints = m_model->njoints - kSkipUniverse; // if we do not want universe joint
+
     // msg_info() << "========= KinematicChainMapping applyJ entering...";
 
     // map in configuration to pinocchio
@@ -408,25 +415,25 @@ namespace sofa::component::mapping::nonlinear
     if (m_fromRootModel and inRoot != nullptr)
     {
       const sofa::defaulttype::RigidDeriv<3, double> &rootVel_w = (*inRoot)[d_indexFromRoot.getValue()];
-      dq.head<6>() = sofa::rigidbodydynamics::spatialVelocityToEigen(rootVel_w);
-      dq.tail((*in).size()) = sofa::rigidbodydynamics::vectorVec1ToEigen(*in, m_model->nv);
+      dq.head<6>() = spatialVelocityToEigen(rootVel_w);
+      dq.tail((*in).size()) = vectorVec1ToEigen(*in, m_model->nv);
     }
     else
     {
-      dq = sofa::rigidbodydynamics::vectorVec1ToEigen(*in, m_model->nv);
+      dq = vectorVec1ToEigen(*in, m_model->nv);
     }
 
     // Single output vector of size njoints + number of extra frames
-    assert((*out).size() == (m_model->njoints - 1 + m_extraFrames.size()));
+    assert((*out).size() == (num_joints + m_extraFrames.size()));
 
     // Write joints
-    for (auto jointIdx = 0ul; jointIdx < m_model->njoints - 1; ++jointIdx)
+    for (JointIndex jointIdx = 0ul; jointIdx < num_joints; ++jointIdx)
     {
       pinocchio::Data::Matrix6x J = pinocchio::Data::Matrix6x::Zero(6, m_model->nv);
       const auto &frameIdx = m_bodyCoMFrames[jointIdx];
       pinocchio::getFrameJacobian(*m_model, *m_data, frameIdx, pinocchio::LOCAL_WORLD_ALIGNED, J);
       Eigen::VectorXd dg = J * dq;
-      (*out)[jointIdx] = sofa::rigidbodydynamics::vec6ToSofaType<Eigen::VectorXd>(dg);
+      (*out)[jointIdx] = vec6ToSofaType<Eigen::VectorXd>(dg);
     }
 
     // Write frames
@@ -436,7 +443,7 @@ namespace sofa::component::mapping::nonlinear
       const auto &frameIdx = m_extraFrames[i];
       pinocchio::getFrameJacobian(*m_model, *m_data, frameIdx, pinocchio::LOCAL_WORLD_ALIGNED, J);
       Eigen::VectorXd dg = J * dq;
-      (*out)[i + m_model->njoints - 1] = sofa::rigidbodydynamics::vec6ToSofaType<Eigen::VectorXd>(dg);
+      (*out)[i + num_joints] = vec6ToSofaType<Eigen::VectorXd>(dg);
     }
   }
 
@@ -451,6 +458,8 @@ namespace sofa::component::mapping::nonlinear
     if (d_componentState.getValue() == sofa::core::objectmodel::ComponentState::Invalid)
       return;
 
+    const int num_joints = m_model->njoints - kSkipUniverse; // if we do not want universe joint
+  
     // maps spatial forces applied on each body to torques on joints
     // msg_info() << "========= KinematicChainMapping applyJT entering...";
 
@@ -461,10 +470,10 @@ namespace sofa::component::mapping::nonlinear
     // size = njoints
 
     Eigen::VectorXd jointsTorques = Eigen::VectorXd::Zero(m_model->nv);
-    for (auto jointIdx = 0ul; jointIdx < m_model->njoints - 1; ++jointIdx)
+    for (JointIndex jointIdx = 0ul; jointIdx < num_joints; ++jointIdx)
     {
       // jointForce is a spatial force so 6-vector
-      const Eigen::VectorXd jointForce = sofa::rigidbodydynamics::vectorToEigen((*in)[jointIdx], 6);
+      const Eigen::VectorXd jointForce = vectorToEigen((*in)[jointIdx], 6);
       pinocchio::Data::Matrix6x J = pinocchio::Data::Matrix6x::Zero(6, m_model->nv);
       const auto &frameIdx = m_bodyCoMFrames[jointIdx];
 
@@ -474,7 +483,7 @@ namespace sofa::component::mapping::nonlinear
     for (auto i = 0ul; i < m_extraFrames.size(); ++i)
     {
       // frameForce is a spatial force so 6-vector
-      const Eigen::VectorXd frameForce = sofa::rigidbodydynamics::vectorToEigen((*in)[m_model->njoints - 1 + i], 6);
+      const Eigen::VectorXd frameForce = vectorToEigen((*in)[num_joints + i], 6);
       pinocchio::Data::Matrix6x J = pinocchio::Data::Matrix6x::Zero(6, m_model->nv);
       const auto &frameIdx = m_extraFrames[i];
 
@@ -486,7 +495,7 @@ namespace sofa::component::mapping::nonlinear
     {
       // joint torques contains first 6 parameters for the root joint, and nv-6 parameters for other joints
       // write (add) root joint spatial force
-      (*outRoot)[0] += sofa::rigidbodydynamics::vec6ToSofaType(jointsTorques.head<6>());
+      (*outRoot)[0] += vec6ToSofaType(jointsTorques.head<6>());
       // write (add) joint torques
       for (auto i = 0ul; i < jointsTorques.size() - 6; ++i)
       {
@@ -514,6 +523,8 @@ namespace sofa::component::mapping::nonlinear
     if (d_componentState.getValue() == sofa::core::objectmodel::ComponentState::Invalid)
       return;
 
+    const int num_joints = m_model->njoints - kSkipUniverse; // if we do not want universe joint
+   
     // msg_info() << "========= KinematicChainMapping applyJT matrix entering...";
     // out will be the resulting torque on each joint
     // out->clear();
@@ -552,14 +563,14 @@ namespace sofa::component::mapping::nonlinear
       {
         // retrieve body frame index (centered at CoM) for each body
         pinocchio::FrameIndex frameIdx;
-        const auto jointIdx = colIt.index();
-        if(jointIdx < m_model->njoints - 1)
+        const JointIndex jointIdx = colIt.index();
+        if(jointIdx < num_joints)
         {
           frameIdx = m_bodyCoMFrames[jointIdx];
         }
         else
         {
-          frameIdx = m_extraFrames[jointIdx - (m_model->njoints - 1)];
+          frameIdx = m_extraFrames[jointIdx - num_joints];
         }
         // msg_info() << "==== applyJT jointIdx = " << jointIdx << " / frameIdx = " << frameIdx;
 
@@ -568,7 +579,7 @@ namespace sofa::component::mapping::nonlinear
         pinocchio::getFrameJacobian(*m_model, *m_data, frameIdx, pinocchio::LOCAL_WORLD_ALIGNED, J);
 
         // sum joint torques for all bodies
-        jointsTorques += J.transpose() * sofa::rigidbodydynamics::spatialVelocityToEigen(colIt.val());
+        jointsTorques += J.transpose() * spatialVelocityToEigen(colIt.val());
       }
 
       if (m_fromRootModel and outRoot != nullptr)
@@ -577,7 +588,7 @@ namespace sofa::component::mapping::nonlinear
         {
           // write (add) root joint spatial force
           auto oRoot = outRoot->writeLine(rowIt.index());
-          const Deriv_t<InRoot> rootWrench(sofa::rigidbodydynamics::vec6ToSofaType(jointsTorques.head<6>()));
+          const Deriv_t<InRoot> rootWrench(vec6ToSofaType(jointsTorques.head<6>()));
           oRoot.addCol(0, rootWrench);
           // write summed joint torques for this constraint to output
           auto outRowIt = out->writeLine(rowIt.index());
@@ -597,7 +608,7 @@ namespace sofa::component::mapping::nonlinear
           for (auto i = 0ul; i < jointsTorques.size(); ++i)
           {
             const Deriv_t<In> torque(jointsTorques[i]); // InDeriv is Vec1 type
-            msg_info() << "writing row[" << rowIt.index() << "], col[" << i << "]:" << torque;
+            // msg_info() << "writing row[" << rowIt.index() << "], col[" << i << "]:" << torque;
             outRowIt.addCol(i, torque);
           }
         }
