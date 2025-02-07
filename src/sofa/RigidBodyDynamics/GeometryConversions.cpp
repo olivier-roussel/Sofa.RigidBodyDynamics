@@ -24,8 +24,8 @@
 
 #include <sofa/RigidBodyDynamics/BaseShapesConversions.h>
 
-#include <hpp/fcl/BVH/BVH_model.h>
-#include <hpp/fcl/shape/geometric_shapes.h>
+#include <coal/BVH/BVH_model.h>
+#include <coal/shape/geometric_shapes.h>
 #include <pinocchio/spatial/fcl-pinocchio-conversions.hpp>
 
 namespace
@@ -36,7 +36,7 @@ namespace
   static const int kDefaultSphereNumSlices = 8;
 
   sofa::component::topology::container::constant::MeshTopology::SPtr
-  fclBaseShapeGeometryToSofaTopology(const std::shared_ptr<hpp::fcl::CollisionGeometry> &geom, 
+  fclBaseShapeGeometryToSofaTopology(const std::shared_ptr<coal::CollisionGeometry> &geom,
     const pinocchio::SE3& tf,
     const Eigen::Vector3d& scale)
   {
@@ -46,27 +46,27 @@ namespace
     // but as we do not care about high performances here and prefer safer code
     switch (geom->getNodeType())
     {
-    case hpp::fcl::GEOM_BOX:
+    case coal::GEOM_BOX:
     {
-      const auto boxGeom = std::dynamic_pointer_cast<hpp::fcl::Box>(geom);
+      const auto boxGeom = std::dynamic_pointer_cast<coal::Box>(geom);
       assert(boxGeom);
 
       meshTopology = sofa::rigidbodydynamics::boxToMeshTopology(boxGeom, tf, scale);
 
       break;
     }
-    case hpp::fcl::GEOM_CYLINDER:
+    case coal::GEOM_CYLINDER:
     {
-      const auto cylGeom = std::dynamic_pointer_cast<hpp::fcl::Cylinder>(geom);
+      const auto cylGeom = std::dynamic_pointer_cast<coal::Cylinder>(geom);
       assert(cylGeom);
 
       meshTopology = sofa::rigidbodydynamics::cylinderToMeshTopology(cylGeom, tf, scale, kDefaultCylinderResolution);
 
       break;
     }
-    case hpp::fcl::GEOM_SPHERE:
+    case coal::GEOM_SPHERE:
     {
-      const auto sphereGeom = std::dynamic_pointer_cast<hpp::fcl::Sphere>(geom);
+      const auto sphereGeom = std::dynamic_pointer_cast<coal::Sphere>(geom);
       assert(sphereGeom);
 
       meshTopology = sofa::rigidbodydynamics::sphereToMeshTopology(sphereGeom, tf, scale, kDefaultSphereNumStacks, kDefaultSphereNumSlices);
@@ -87,7 +87,7 @@ namespace
 namespace sofa::rigidbodydynamics
 {
   sofa::component::topology::container::constant::MeshTopology::SPtr
-  fclGeometryToSofaTopology(const std::shared_ptr<hpp::fcl::CollisionGeometry> &geom, 
+  fclGeometryToSofaTopology(const std::shared_ptr<coal::CollisionGeometry> &geom,
     const pinocchio::SE3& tf,
     const Eigen::Vector3d& scale)
   {
@@ -97,31 +97,31 @@ namespace sofa::rigidbodydynamics
     // but as we do not care about high performances here and prefer safer code
     switch (geom->getObjectType())
     {
-    case hpp::fcl::OT_BVH:
+    case coal::OT_BVH:
     {
-      const auto bvhGeom = std::dynamic_pointer_cast<hpp::fcl::BVHModelBase>(geom);
+      const auto bvhGeom = std::dynamic_pointer_cast<coal::BVHModelBase>(geom);
       assert(bvhGeom);
 
       meshTopology = sofa::core::objectmodel::New<sofa::component::topology::container::constant::MeshTopology>();
       meshTopology->setName("mesh");
-      if (bvhGeom->getModelType() == hpp::fcl::BVH_MODEL_TRIANGLES)
+      if (bvhGeom->getModelType() == coal::BVH_MODEL_TRIANGLES)
       {
         // reconstruct mesh
         for (auto vertIdx = 0ul; vertIdx < bvhGeom->num_vertices; ++vertIdx)
         {
-          const pinocchio::SE3::Vector3 fclVert = tf.act(bvhGeom->vertices[vertIdx]).cwiseProduct(scale.cwiseAbs());
+          const pinocchio::SE3::Vector3 fclVert = tf.act((*bvhGeom->vertices)[vertIdx]).cwiseProduct(scale.cwiseAbs());
           meshTopology->addPoint(fclVert[0], fclVert[1], fclVert[2]);
 
         }
         for (auto triIdx = 0ul; triIdx < bvhGeom->num_tris; ++triIdx)
         {
-          const auto& fclTri = bvhGeom->tri_indices[triIdx];
+          const auto& fclTri = (*bvhGeom->tri_indices)[triIdx];
           meshTopology->addTriangle(fclTri[0], fclTri[1], fclTri[2]);
         }
       }
       break;
     }
-    case hpp::fcl::OT_GEOM:
+    case coal::OT_GEOM:
       meshTopology = fclBaseShapeGeometryToSofaTopology(geom, tf, scale);
       break;
     default:

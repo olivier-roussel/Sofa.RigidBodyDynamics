@@ -21,25 +21,25 @@
  ******************************************************************************/
 #pragma once
 
-#include <hpp/fcl/shape/geometric_shapes.h>
+#include <coal/shape/geometric_shapes.h>
 #include <pinocchio/spatial/se3.hpp>
 #include <sofa/component/topology/container/constant/MeshTopology.h>
 
 namespace sofa::rigidbodydynamics
 {
   sofa::component::topology::container::constant::MeshTopology::SPtr
-  boxToMeshTopology(const std::shared_ptr<hpp::fcl::Box>& geom, 
+  boxToMeshTopology(const std::shared_ptr<coal::Box>& geom,
     const pinocchio::SE3& tf,
     const Eigen::Vector3d& scale);
 
   sofa::component::topology::container::constant::MeshTopology::SPtr
-  cylinderToMeshTopology(const std::shared_ptr<hpp::fcl::Cylinder>& geom, 
+  cylinderToMeshTopology(const std::shared_ptr<coal::Cylinder>& geom,
     const pinocchio::SE3& tf,
     const Eigen::Vector3d& scale,
     unsigned int resolution);
 
   sofa::component::topology::container::constant::MeshTopology::SPtr
-  sphereToMeshTopology(const std::shared_ptr<hpp::fcl::Sphere>& geom, 
+  sphereToMeshTopology(const std::shared_ptr<coal::Sphere>& geom,
     const pinocchio::SE3& tf,
     const Eigen::Vector3d& scale,
     unsigned int numStacks,
