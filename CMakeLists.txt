@@ -19,6 +19,7 @@ set(HEADER_FILES
     ${SOFA_RBD_SRC_DIR}/GeometryConversions.h
     ${SOFA_RBD_SRC_DIR}/KinematicChainMapping.h
     ${SOFA_RBD_SRC_DIR}/KinematicChainMapping.inl
+    ${SOFA_RBD_SRC_DIR}/Types.h
     ${SOFA_RBD_SRC_DIR}/URDFModelLoader.h
     )
 set(HEADER_FILES_TO_MOC

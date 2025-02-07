@@ -1,2 +1,7 @@
 examples/sofa/RigidBodyDynamics/__pycache__/
 examples/sofa/RigidBodyDynamics/*.log
+build
+
+# pixi environments
+.pixi
+*.egg-info

@@ -1,0 +1,73 @@
+[project]
+authors = ["Olivier Roussel <olivier.roussel@inria.fr>"]
+channels = ["conda-forge", "sofa-framework"]
+description = "Add a short description here"
+name = "Sofa.RigidBodyDynamics"
+# TODO fix win-64 dependencies resolution problem
+platforms = ["linux-64", "osx-64", "osx-arm64"]
+version = "25.06.99"
+license = "LGPL-2.1-or-later"
+license-file = "License.md"
+
+# TODO: add ccache support
+[build-dependencies]
+cmake = ">=3.22"
+ninja = ">=1.11"
+pkg-config = "*"
+git = ">=2.47.0"
+
+[target.unix.build-dependencies]
+cxx-compiler = ">=1.7.0"
+
+#[target.win-64.build-dependencies]
+#vs2022_win-64 = ">=19.42.0"
+
+[dependencies]
+python = ">=3.9.0"
+pinocchio = ">=3.0.0"
+sofa-devel = ">=24.12.00"
+sofa-python3 = ">=24.12.00"
+sofa-softrobots = ">=24.12.00"
+sofa-softrobotsinverse = ">=24.12.00"
+
+[target.linux.dependencies]
+libglu = "*"
+
+[target.linux-64.dependencies]
+mesa-libgl-devel-cos7-x86_64 = "*"
+
+[feature.examples.dependencies]
+sofa-app = ">=24.12.00"
+sofa-gui-qt = ">=24.12.00"
+example-robot-data = "*"
+
+[feature.examples.activation]
+env = { URDF_MODEL_PATH="$CONDA_PREFIX/share" }
+
+[tasks]
+configure = { cmd = [
+  "cmake",
+  "-G",
+  "Ninja",
+  "-B",
+  "build",
+  "-S",
+  ".",
+  "-DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX",
+  "-DPython_EXECUTABLE=$CONDA_PREFIX/bin/python",
+  "-DCMAKE_BUILD_TYPE=Release"
+] }
+build = { cmd = "cmake --build build --target all --parallel 8", depends-on = ["configure"] }
+install = { cmd = "cmake --build build --target install", depends-on = ["build"] }
+clean = { cmd = "rm -rf build" }
+test = { cmd = "ctest --test-dir build --output-on-failure", depends-on = [
+  "build",
+] }
+
+[feature.examples.tasks]
+example-robot = { cmd = "$CONDA_PREFIX/bin/runSofa -l SofaPython3 -l Sofa.GUI.Qt -g qglviewer $PIXI_PROJECT_ROOT/examples/sofa/RigidBodyDynamics/robot.py", depends-on = ["install"] }
+example-inverse-hand = { cmd = "$CONDA_PREFIX/bin/runSofa -l SofaPython3 -l Sofa.GUI.Qt -g qglviewer $PIXI_PROJECT_ROOT/examples/sofa/RigidBodyDynamics/InverseKineHand/InverseKineHand.py", depends-on = ["install"] }
+
+[environments]
+default = { }
+with-examples = { features = ["examples"] }
