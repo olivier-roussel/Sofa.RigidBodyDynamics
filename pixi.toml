@@ -4,7 +4,7 @@ channels = ["conda-forge", "sofa-framework"]
 description = "Add a short description here"
 name = "Sofa.RigidBodyDynamics"
 # TODO fix win-64 dependencies resolution problem
-platforms = ["linux-64", "osx-64", "osx-arm64"]
+platforms = ["linux-64", "osx-64", "osx-arm64", "win-64"]
 version = "25.06.99"
 license = "LGPL-2.1-or-later"
 license-file = "License.md"
@@ -19,8 +19,8 @@ git = ">=2.47.0"
 [target.unix.build-dependencies]
 cxx-compiler = ">=1.7.0"
 
-#[target.win-64.build-dependencies]
-#vs2022_win-64 = ">=19.42.0"
+[target.win-64.build-dependencies]
+vs2022_win-64 = ">=19.42.0"
 
 [dependencies]
 python = ">=3.9.0"
