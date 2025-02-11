@@ -3,7 +3,6 @@ authors = ["Olivier Roussel <olivier.roussel@inria.fr>"]
 channels = ["conda-forge", "sofa-framework"]
 description = "Add a short description here"
 name = "Sofa.RigidBodyDynamics"
-# TODO fix win-64 dependencies resolution problem
 platforms = ["linux-64", "osx-64", "osx-arm64", "win-64"]
 version = "25.06.99"
 license = "LGPL-2.1-or-later"
@@ -27,8 +26,6 @@ python = ">=3.9.0"
 pinocchio = ">=3.0.0"
 sofa-devel = ">=24.12.00"
 sofa-python3 = ">=24.12.00"
-sofa-softrobots = ">=24.12.00"
-sofa-softrobotsinverse = ">=24.12.00"
 
 [target.linux.dependencies]
 libglu = "*"
@@ -37,6 +34,8 @@ libglu = "*"
 mesa-libgl-devel-cos7-x86_64 = "*"
 
 [feature.examples.dependencies]
+sofa-softrobots = ">=24.12.00"
+sofa-softrobotsinverse = ">=24.12.00"
 sofa-app = ">=24.12.00"
 sofa-gui-qt = ">=24.12.00"
 example-robot-data = "*"
@@ -60,14 +59,13 @@ configure = { cmd = [
 build = { cmd = "cmake --build build --target all --parallel 8", depends-on = ["configure"] }
 install = { cmd = "cmake --build build --target install", depends-on = ["build"] }
 clean = { cmd = "rm -rf build" }
-test = { cmd = "ctest --test-dir build --output-on-failure", depends-on = [
-  "build",
-] }
+test = { cmd = "ctest --test-dir build --output-on-failure", depends-on = ["build"] }
 
 [feature.examples.tasks]
+example-simple-arm = { cmd = "$CONDA_PREFIX/bin/runSofa -l SofaPython3 -l Sofa.GUI.Qt -g qglviewer $PIXI_PROJECT_ROOT/examples/sofa/RigidBodyDynamics/JointActuator/JointActuator.py", depends-on = ["install"] }
 example-robot = { cmd = "$CONDA_PREFIX/bin/runSofa -l SofaPython3 -l Sofa.GUI.Qt -g qglviewer $PIXI_PROJECT_ROOT/examples/sofa/RigidBodyDynamics/robot.py", depends-on = ["install"] }
 example-inverse-hand = { cmd = "$CONDA_PREFIX/bin/runSofa -l SofaPython3 -l Sofa.GUI.Qt -g qglviewer $PIXI_PROJECT_ROOT/examples/sofa/RigidBodyDynamics/InverseKineHand/InverseKineHand.py", depends-on = ["install"] }
 
 [environments]
-default = { }
-with-examples = { features = ["examples"] }
+default = { solve-group = "base" }
+with-examples = { features = ["examples"], solve-group = "base" }
