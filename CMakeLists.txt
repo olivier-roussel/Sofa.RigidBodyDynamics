@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.12)
-project(Sofa.RigidBodyDynamics VERSION 23.12.99 LANGUAGES CXX)
+project(Sofa.RigidBodyDynamics VERSION 25.06.99 LANGUAGES CXX)
 
 find_package(Sofa.Simulation.Core REQUIRED)
 find_package(Sofa.Component.StateContainer REQUIRED)
