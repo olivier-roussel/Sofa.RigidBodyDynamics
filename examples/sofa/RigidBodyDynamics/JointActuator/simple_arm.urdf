@@ -43,8 +43,7 @@
   </link>
 
   <joint name="arm_body_tool0_fixed_joint" type="fixed">
-    <origin xyz="0.043 0.0 0.0" rpy="0 0 0" />
-    <!-- <origin xyz="0.05715 0.0 0.0" rpy="0 0 0" /> -->
+    <origin xyz="0.07 0.0 0.0" rpy="0 0 0" />
     <parent link="arm_body"/>
     <child link="tool0"/>
   </joint>
