@@ -1,6 +1,7 @@
-examples/sofa/RigidBodyDynamics/__pycache__/
-examples/sofa/RigidBodyDynamics/*.log
 build
+*.pyc
+*.log
+*.view
 
 # pixi environments
 .pixi
