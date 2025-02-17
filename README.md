@@ -23,31 +23,6 @@ The project will be built in the build directory.
 
 Alternatively, you can run `pixi shell` and build the project with `cmake` manually. This command will activate an environment in your shell with all dependencies already installed.
 
-Then, try the plugin with one of the provided examples throught the following Pixi tasks.
-
-#### example-load-robot
-
-Creates a simple SOFA scene and loads an URDF model (here a Franka Emika Panda robot) inside it:
-```
-pixi run -e example-load-robot example-robot-data/robots/panda_description/urdf/panda.urdf
-```
-You can replace the loaded URDF file at your convenience. The [example-robot-data](https://github.com/Gepetto/example-robot-data) installed package provides some URDF file, for example the PAL Robotics Talos humanoid:
-```
-pixi run -e example-load-robot example-robot-data/robots/talos_data/robots/talos_reduced_corrected.urdf
-```
-Or the Open Dynamic Robot Initiative Solo quadruped robot:
-```
-pixi run -e example-load-robot example-robot-data/robots/solo_description/robots/solo.urdf
-```
-
-#### example-simple-arm
-
-Creates a simple SOFA scene and loads an URDF model of a simple 1-dof manipulator with an inverse control towards an effector position, using the [SoftRobots.Inverse plugin](https://github.com/SofaDefrost/SoftRobots.Inverse).
-
-```
-pixi run -e example-simple-arm
-```
-
 ### Build from source
 
 Build and install with `cmake`:
@@ -77,6 +52,37 @@ Install with `conda`:
 ```
 conda install example-robot-data sofa-framework::sofa-app sofa-framework::sofa-softrobotsinverse
 ```
+## Run examples
+
+### With Pixi
+
+You can try the plugin with one of the provided examples throught the following Pixi tasks.
+
+#### example-load-robot
+
+Creates a simple SOFA scene and loads an URDF model (here a Franka Emika Panda robot) inside it:
+```
+pixi run -e example-load-robot example-robot-data/robots/panda_description/urdf/panda.urdf
+```
+You can replace the loaded URDF file at your convenience. The [example-robot-data](https://github.com/Gepetto/example-robot-data) installed package provides some URDF file, for example the PAL Robotics Talos humanoid:
+```
+pixi run -e example-load-robot example-robot-data/robots/talos_data/robots/talos_reduced_corrected.urdf
+```
+Or the Open Dynamic Robot Initiative Solo quadruped robot:
+```
+pixi run -e example-load-robot example-robot-data/robots/solo_description/robots/solo.urdf
+```
+
+#### example-simple-arm
+
+Creates a simple SOFA scene and loads an URDF model of a simple 1-dof manipulator with an inverse control towards an effector position, using the [SoftRobots.Inverse plugin](https://github.com/SofaDefrost/SoftRobots.Inverse).
+
+```
+pixi run -e example-simple-arm
+```
+
+
+### Without Pixi
 
 #### Set `URDF_MODEL_PATH` environment variables
 
