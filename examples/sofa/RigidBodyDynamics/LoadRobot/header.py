@@ -20,14 +20,14 @@ def addHeader(rootNode):
     rootNode.addObject('DefaultVisualManagerLoop')
     rootNode.addObject('FreeMotionAnimationLoop')
     # rootNode.addObject('DefaultAnimationLoop')
-    rootNode.addObject('GenericConstraintSolver', maxIterations=50, tolerance=1e-5, printLog=False)
+    rootNode.addObject('GenericConstraintSolver', maxIterations=150, tolerance=1e-5, printLog=False)
     rootNode.addObject('BackgroundSetting', color=[1., 1., 1., 1.])
     rootNode.findData('dt').value=0.01
     # rootNode.gravity = [0,-9810,0]
     # rootNode.gravity = [0, -9.81, 0]
-    # rootNode.gravity = [0, 0, -9.81]
+    rootNode.gravity = [0, 0, -9.81]
     # rootNode.gravity = [0, 0, -9810]
-    rootNode.gravity = [0, 0, 0]
+    # rootNode.gravity = [0, 0, 0]
 
 def createScene(rootNode):
 
