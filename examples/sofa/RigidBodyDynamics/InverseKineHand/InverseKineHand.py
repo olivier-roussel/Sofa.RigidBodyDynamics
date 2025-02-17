@@ -54,6 +54,10 @@ def createScene(rootNode):
     rootNode.addObject('RequiredPlugin', name='Sofa.Component.SolidMechanics.FEM.Elastic') # Needed to use components [TetrahedronFEMForceField]  
     rootNode.addObject('RequiredPlugin', name='Sofa.Component.StateContainer') # Needed to use components [MechanicalObject]  
     rootNode.addObject('RequiredPlugin', name='Sofa.Component.Topology.Container.Constant') # Needed to use components [MeshTopology]  
+    rootNode.addObject('RequiredPlugin', name='Sofa.Component.LinearSolver.Iterative')
+    rootNode.addObject('RequiredPlugin', name='Sofa.Component.Collision.Geometry')
+    rootNode.addObject('RequiredPlugin', name='Sofa.Component.Mapping.Linear')
+    rootNode.addObject('RequiredPlugin', name='Sofa.Component.Mapping.NonLinear')
 
     rootNode.addObject('RequiredPlugin', name='SofaPlugins', pluginName=['Sofa.RigidBodyDynamics', 'SofaPython3', 'SoftRobots', 'SoftRobots.Inverse'])
 
@@ -64,7 +68,8 @@ def createScene(rootNode):
 
     rootNode.addObject('FreeMotionAnimationLoop')
     rootNode.addObject('QPInverseProblemSolver', printLog=True, epsilon=1e-3, allowSliding=False,
-                       maxIterations=5000, tolerance=1e-10, responseFriction=3., minContactForces=0.02 * scale)
+                       maxIterations=5000, tolerance=1e-10, responseFriction=3., minContactForces=0.02 * scale,
+                       qpSolver="proxQP")
 
     rootNode.addObject('CollisionPipeline')
     rootNode.addObject('RuleBasedContactManager', responseParams='mu=3.', response='FrictionContactConstraint')
@@ -92,8 +97,7 @@ def createScene(rootNode):
     ##########################################
     modelTranslation = tfCoords([0.014 * scale, 0.01 * scale, 0.014 * scale])
     modelRotation = pin.rpy.matrixToRpy(pin.utils.rotate('z', math.pi * 0.5) @ pin.utils.rotate('x', math.pi*0.5))
-    # modelRotation = pin.rpy.matrixToRpy(pin.utils.rotate('z', math.pi) @ pin.utils.rotate('x', math.pi*0.5))
-    modelRotationDegrees = [i * 180. / math.pi for i in modelRotation]
+    modelRotationDegrees = [float(i) * 180. / math.pi for i in modelRotation]
     model = rootNode.addChild('model')
     model.addObject('EulerImplicitSolver')
     model.addObject('SparseLDLSolver', template="CompressedRowSparseMatrix")
@@ -185,17 +189,17 @@ def createScene(rootNode):
     fingersContact1 = fftipFrameNode.addChild('contact1')
     fingersContact1.addObject('MechanicalObject')
     fingersContact1.addObject('SphereCollisionModel', radius=0.008 * scale, group=2)
-    fingersContact1.addObject('RigidMapping', template='Rigid,Vec3d', input="@..", index=0)
+    fingersContact1.addObject('RigidMapping', template='Rigid3d,Vec3d', input="@..", index=0)
 
     fingersContact2 = lftipFrameNode.addChild('contact2')
     fingersContact2.addObject('MechanicalObject', scale=0.1 * scale)
     fingersContact2.addObject('SphereCollisionModel', radius=0.008 * scale, group=2)
-    fingersContact2.addObject('RigidMapping', template='Rigid,Vec3d', input="@..", index=0)
+    fingersContact2.addObject('RigidMapping', template='Rigid3d,Vec3d', input="@..", index=0)
  
     fingersContact3 = thtipFrameNode.addChild('contact3')
     fingersContact3.addObject('MechanicalObject', scale=0.1 * scale)
     fingersContact3.addObject('SphereCollisionModel', radius=0.008 * scale, group=2)
-    fingersContact3.addObject('RigidMapping', template='Rigid,Vec3d', input="@..", index=0)
+    fingersContact3.addObject('RigidMapping', template='Rigid3d,Vec3d', input="@..", index=0)
 
 
     return rootNode
