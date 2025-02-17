@@ -63,8 +63,14 @@ test = { cmd = "ctest --test-dir build --output-on-failure", depends-on = ["buil
 
 [feature.examples.tasks]
 example-simple-arm = { cmd = "$CONDA_PREFIX/bin/runSofa -l SofaPython3 -l Sofa.GUI.Qt -g qglviewer $PIXI_PROJECT_ROOT/examples/sofa/RigidBodyDynamics/JointActuator/JointActuator.py", depends-on = ["install"] }
-example-robot = { cmd = "$CONDA_PREFIX/bin/runSofa -l SofaPython3 -l Sofa.GUI.Qt -g qglviewer $PIXI_PROJECT_ROOT/examples/sofa/RigidBodyDynamics/robot.py", depends-on = ["install"] }
-example-inverse-hand = { cmd = "$CONDA_PREFIX/bin/runSofa -l SofaPython3 -l Sofa.GUI.Qt -g qglviewer $PIXI_PROJECT_ROOT/examples/sofa/RigidBodyDynamics/InverseKineHand/InverseKineHand.py", depends-on = ["install"] }
+# Loads a robot from the URDF file given in argument with a GUI to control it DoFs,
+# assuming the URDF model path is in previsoulsy defined URDF_MODEL_PATH environnement variable,
+# i.e. given URDF filename must be given to this directory.
+# Example:
+# pixi run example-load-robot example-robot-data/robots/talos_data/robots/talos_reduced_corrected.urdf
+example-load-robot = { cmd = "$CONDA_PREFIX/bin/runSofa -l SofaPython3 -l Sofa.GUI.Qt -g qglviewer $PIXI_PROJECT_ROOT/examples/sofa/RigidBodyDynamics/LoadRobot/robot.py --argv", depends-on = ["install"] }
+# Not functional yet
+#example-inverse-hand = { cmd = "$CONDA_PREFIX/bin/runSofa -l SofaPython3 -l Sofa.GUI.Qt -g qglviewer $PIXI_PROJECT_ROOT/examples/sofa/RigidBodyDynamics/InverseKineHand/InverseKineHand.py", depends-on = ["install"] }
 
 [environments]
 default = { solve-group = "base" }
