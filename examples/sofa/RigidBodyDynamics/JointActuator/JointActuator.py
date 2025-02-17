@@ -12,7 +12,6 @@ urdf_full_filename = os.path.join(dir_path, urdf_file)
 # position of the end effector (tip of the arm),
 # and the solver QPInverseProblemSolver to solve the inverse problem.
 
-
 def createScene(rootNode):
     rootNode.addObject('RequiredPlugin', name='SoftRobots')
     rootNode.addObject('RequiredPlugin', name='SoftRobots.Inverse')
@@ -42,7 +41,6 @@ def createScene(rootNode):
     rootNode.addObject('QPInverseProblemSolver', printLog=True, epsilon=1.e-15, allowSliding=False, actuatorsOnly=True,
                        maxIterations=5000, tolerance=1e-15,
                        qpSolver="proxQP")
-                      #  qpSolver="qpOASES")
 
     # Target position of the end effector
     goal = rootNode.addChild('Goal')
