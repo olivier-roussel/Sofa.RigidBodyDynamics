@@ -49,7 +49,7 @@ class Robot:
         robotWrapperNode.addObject('GenericConstraintCorrection')
         urdfLoader = robotWrapperNode.addObject('URDFModelLoader', name='URDFModelLoader', 
           filename=urdf_full_filename, modelDirectory=model_path, useFreeFlyerRootJoint=useFFRootJoint, 
-          printLog=True, addCollision=False, addJointsActuators=False)
+          printLog=False, addCollision=False, addJointsActuators=False)
 
         robotNode = robotWrapperNode.getChild('Robot')
         dofs = robotNode.getObject('dofs')

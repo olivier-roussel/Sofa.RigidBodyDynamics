@@ -264,7 +264,7 @@ namespace sofa::rigidbodydynamics
     kinematicChainMapping->setName("kinematicChainMapping");
     kinematicChainMapping->setBodyCoMFrames(bodyCoMFrames);
     kinematicChainMapping->m_extraFrames = extraFrames;
-    kinematicChainMapping->f_printLog.setValue(true);
+    // kinematicChainMapping->f_printLog.setValue(true);
     kinematicChainMapping->setModel(model);
 
     // set mapping input1

@@ -57,7 +57,7 @@ def createScene(rootNode):
     simulation.addObject('CGLinearSolver', iterations=100, tolerance=1e-5, threshold=1e-5)
 
     urdfLoader = simulation.addObject('URDFModelLoader', name='URDFModelLoader', filename=urdf_full_filename, 
-      modelDirectory=dir_path, useFreeFlyerRootJoint=False, printLog=True, 
+      modelDirectory=dir_path, useFreeFlyerRootJoint=False, printLog=False, 
       addCollision=False, addJointsActuators=False)
 
     robotNode = simulation.getChild('Robot')
