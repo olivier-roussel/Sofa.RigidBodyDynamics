@@ -345,8 +345,8 @@ namespace sofa::rigidbodydynamics
       kinematicChainMapping->addInputModel2(rootJointDof.get());
     }
 
-    msg_info() << "-- pinocchio model->nbodies: " << model->nbodies;
-    msg_info() << "-- pinocchio model->njoints: " << model->njoints;
+    msg_info() << "-- pinocchio model num bodies: " << model->nbodies;
+    msg_info() << "-- pinocchio model num joints: " << model->njoints;
     msg_info() << "-- SOFA converted model num_joints : " << num_joints;
 
     for (JointIndex jointIdx = 0; jointIdx < num_joints; ++jointIdx)
@@ -376,31 +376,8 @@ namespace sofa::rigidbodydynamics
       rigidMass.inertiaMatrix = sofa::rigidbodydynamics::mat3ToSofaType(inertiaDivByMass);
       rigidMass.volume = 1.; // XXX: should not be used here as we only deal with rigid bodies, so we should be able to set any value
 
-      // if(jointInertia.mass() == 0.)
-      // {
-      //   // XXX
-      //   msg_warning() << "Joint " << model->names[jointIdx] << " has a null mass associated to it. Setting it to one instead...";
-      //   rigidMass.mass = 1.;
-      // } else {
-      //   rigidMass.mass = jointInertia.mass();
-      // }
-
       msg_info() << "-- inertia matrix (sofa) = " << rigidMass.inertiaMatrix;
       msg_info() << "----- det = " << determinant(rigidMass.inertiaMatrix);
-      
-      type::Mat<3,3,double> invMat;
-      type::Mat<3,3,double> inertiaMassMat = rigidMass.inertiaMatrix * rigidMass.mass;
-      if(not invMat.invert(inertiaMassMat))
-      {
-        msg_warning() << "Mass inertia matrix is not invertible due to too low mass and/or inertia and lack of numeric precision, regularizing inertia by scaling...";
-        rigidMass.inertiaMatrix = rigidMass.inertiaMatrix * 10;
-
-        msg_info() << "-- after regul: inertiaMassMat (sofa) = " << inertiaMassMat;
-        msg_info() << "----- det = " << determinant(inertiaMassMat);
-        // msg_error() << "Failed to invert inertia mass matrix of joint[" << jointIdx << "]: " << model->names[jointIdx];
-        // d_componentState.setValue(sofa::core::objectmodel::ComponentState::Invalid);
-        // return false;
-      }
 
       rigidMass.recalc();
       bodyMass->setMass(rigidMass);
