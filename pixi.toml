@@ -26,6 +26,8 @@ python = ">=3.9.0"
 pinocchio = ">=3.0.0"
 sofa-devel = ">=24.12.00"
 sofa-python3 = ">=24.12.00"
+sofa-softrobots = ">=24.12.00"
+sofa-softrobotsinverse = ">=24.12.00"
 
 [target.linux.dependencies]
 libglu = "*"
@@ -34,8 +36,6 @@ libglu = "*"
 mesa-libgl-devel-cos7-x86_64 = "*"
 
 [feature.examples.dependencies]
-sofa-softrobots = ">=24.12.00"
-sofa-softrobotsinverse = ">=24.12.00"
 sofa-app = ">=24.12.00"
 sofa-gui-qt = ">=24.12.00"
 example-robot-data = "*"
