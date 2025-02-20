@@ -53,7 +53,7 @@ configure = { cmd = [
   "-S",
   ".",
   "-DCMAKE_INSTALL_PREFIX=$CONDA_PREFIX",
-  "-DPython_EXECUTABLE=$CONDA_PREFIX/bin/python",
+  "-DPython_EXECUTABLE=$CONDA_PYTHON_EXE",
   "-DCMAKE_BUILD_TYPE=Release"
 ] }
 build = { cmd = "cmake --build build --target all --parallel 8", depends-on = ["configure"] }
