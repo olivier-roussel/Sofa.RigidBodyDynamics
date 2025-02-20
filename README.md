@@ -15,7 +15,7 @@ and change your current directory to the checkouted folder.
 To build Sofa.RigidBodyDynamics from source the easiest way is to use [Pixi](https://pixi.sh/).
 Pixi is a cross-platform package management tool for developers that will install all required dependencies in `.pixi` directory. If you don't have Pixi installed yet, you can get it [here](https://pixi.sh/latest/#installation).
 
-Run the following command to install dependencies, configure and build the project:
+Run the following command from your source directory to install dependencies, configure and build the project:
 ```
 pixi run build
 ```
