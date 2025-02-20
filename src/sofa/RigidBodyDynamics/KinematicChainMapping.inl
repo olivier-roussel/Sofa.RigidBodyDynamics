@@ -42,7 +42,7 @@ using namespace sofa::rigidbodydynamics;
 namespace {
   constexpr auto kMinTorque = 1.e-6;
 
-  constexpr auto kMinTorqueSqrd = std::pow(kMinTorque, 2);
+  constexpr auto kMinTorqueSqrd = kMinTorque*kMinTorque;
 }
 
 namespace sofa::component::mapping::nonlinear
