@@ -12,33 +12,45 @@ class App(threading.Thread):
     def __init__(self, qRest):
         threading.Thread.__init__(self)
         self.daemon = True
+
         self.start()
 
         self.qRest = qRest
+        self.q = np.copy(qRest)
 
     def reset(self):
-        for i in range(0, len(self.qRest)):
-          self.q[i].set(self.qRest[i])
+        self.q =  np.copy(self.qRest)
 
     def callback(self):
         self.root.quit()
 
     def updateQLabels(self, event, index):
-        self.qLabels[index].config(text=str(event))
+       val_str = str(event).replace(',', '.')
+       self.q[index] = float(val_str)
+       self.qLabels[index].config(text=val_str)
 
     def run(self):
         self.root = tkinter.Tk()
         self.root.protocol("WM_DELETE_WINDOW", self.callback)
 
-        self.q = []
-        for i in range(0, len(self.qRest)):
-          self.q.append(tkinter.DoubleVar())
+        self.q_sliders = []
+        for i in range(0, len(self.q)):
+          self.q_sliders.append(tkinter.DoubleVar(value=self.q[i]))
 
         self.qLabels = []
         for i in range(0, len(self.q)):
           tkinter.Label(self.root, text='q[' + str(i) + ']').grid(row=i, column=0)
-          tkinter.Scale(self.root, variable=self.q[i], resolution=0.001, length=300, showvalue=0, from_=-pi, to=pi, orient=tkinter.HORIZONTAL, command=lambda event, index=i: self.updateQLabels(event, index)).grid(row=i, column=1)
-          label = tkinter.Label(self.root, text=str(self.q[i].get()))
+          scale = tkinter.Scale(self.root,
+                        variable=self.q_sliders[i],
+                        resolution=0.001,
+                        length=300,
+                        showvalue=0,
+                        from_=-pi,
+                        to=pi,
+                        orient=tkinter.HORIZONTAL,
+                        command=lambda event, index=i: self.updateQLabels(event, index))
+          scale.grid(row=i, column=1)
+          label = tkinter.Label(self.root, text=str(self.q[i]))
           label.grid(row=i, column=2)
           self.qLabels.append(label)
 
@@ -73,7 +85,7 @@ class RobotGUI(Sofa.Core.Controller):
         qRestData = urdfLoader.getData('qRest')
         with qRestData.writeableArray() as qRestDataValue:
           for i in range(0, len(qRestDataValue)):
-            qRestDataValue[i] = self.app.q[i].get()
+            qRestDataValue[i] = self.app.q[i]
 
         return
 
