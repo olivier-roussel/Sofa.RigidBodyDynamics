@@ -31,9 +31,9 @@
 #include <sofa/component/mapping/nonlinear/RigidMapping.h>
 #include <sofa/component/mass/UniformMass.h>
 #include <sofa/component/statecontainer/MechanicalObject.h>
-#include <sofa/component/collision/geometry/TriangleModel.h>
-#include <sofa/component/collision/geometry/LineModel.h>
-#include <sofa/component/collision/geometry/PointModel.h>
+#include <sofa/component/collision/geometry/TriangleCollisionModel.h>
+#include <sofa/component/collision/geometry/LineCollisionModel.h>
+#include <sofa/component/collision/geometry/PointCollisionModel.h>
 
 #include <sofa/defaulttype/RigidTypes.h>
 #include <sofa/gl/component/rendering3d/OglModel.h>
